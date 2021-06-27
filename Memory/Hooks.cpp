@@ -25,7 +25,7 @@ void Hooks::Init() {
 	{
 		// GameMode::vtable
 		{
-			uintptr_t sigOffset = FindSignature("48 8D 05 ? ? ? ? 48 8B D9 48 89 01 8B FA 48 8B 89 ? ? ? ? 48 85 C9 74 ? 48 8B 01 BA ? ? ? ? FF 10 48 8B 8B");
+			uintptr_t sigOffset = FindSignature("8 8B 89 ? ? ? ? 48 85 C9 ? ? 33 C0 48 8B 5C ? ?");
 			int offset = *reinterpret_cast<int*>(sigOffset + 3);
 			uintptr_t** gameModeVtable = reinterpret_cast<uintptr_t**>(sigOffset + offset + /*length of instruction*/ 7);
 			if (gameModeVtable == 0x0 || sigOffset == 0x0)
