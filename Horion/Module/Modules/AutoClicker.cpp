@@ -1,8 +1,9 @@
 #include "AutoClicker.h"
 
-AutoClicker::AutoClicker() : IModule(0x0, Category::COMBAT, "A simple autoclicker, automatically clicks for you.") {
+AutoClicker::AutoClicker() : IModule(0, Category::COMBAT, "A simple autoclicker, automatically clicks for you.") {
 	this->registerBoolSetting("rightclick", &this->rightclick, rightclick);
-	this->registerBoolSetting("only swords/axes", &this->sword, this->sword);
+	this->registerBoolSetting("only weapons", &this->weapons, this->weapons);
+	this->registerBoolSetting("break blocks", &this->breakBlocks, this->breakBlocks);
 	this->registerIntSetting("delay", &this->delay, this->delay, 0, 20);
 	this->registerBoolSetting("hold", &this->hold, this->hold);
 }
@@ -17,22 +18,28 @@ const char* AutoClicker::getModuleName() {
 void AutoClicker::onTick(C_GameMode* gm) {
 	if ((GameData::isLeftClickDown() || !hold) && GameData::canUseMoveKeys()) {
 		C_LocalPlayer* localPlayer = g_Data.getLocalPlayer();
-		C_Entity* target = g_Data.getClientInstance()->getPointerStruct()->entityPtr;
+		PointingStruct* pointing = g_Data.getClientInstance()->getPointerStruct();
 		Odelay++;
 
 		if (Odelay >= delay) {
-			auto selectedItemId = localPlayer->getSelectedItemId();
-			if (sword && !(selectedItemId == 268 || selectedItemId == 267 || selectedItemId == 272 || selectedItemId == 276 || selectedItemId == 283 /*swords*/
-						   || selectedItemId == 271 || selectedItemId == 275 || selectedItemId == 279 || selectedItemId == 286 || selectedItemId == 258 /*axes*/))
+			auto selectedItem = localPlayer->getSelectedItem();
+			if (weapons && selectedItem->getAttackingDamageWithEnchants() < 1)
 				return;
 
 			g_Data.leftclickCount++;
 
-			if(!moduleMgr->getModule<NoSwing>()->isEnabled()) 
+			if (!moduleMgr->getModule<NoSwing>()->isEnabled())
 				localPlayer->swingArm();
 
-			if (target != 0)
-				gm->attack(target);
+			if (pointing->entityPtr != 0)
+				gm->attack(pointing->entityPtr);
+			else if (breakBlocks) {
+				bool isDestroyed = false;
+				gm->startDestroyBlock(pointing->block, pointing->blockSide, isDestroyed);
+				gm->stopDestroyBlock(pointing->block);
+				if (isDestroyed && localPlayer->region->getBlock(pointing->block)->blockLegacy->blockId != 0)
+					gm->destroyBlock(&pointing->block, 0);
+			}
 			Odelay = 0;
 		}
 	}

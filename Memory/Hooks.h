@@ -65,8 +65,10 @@ class Hooks {
 private:
 	bool shouldRender = true;
 	char currentScreenName[100];
-
+		 
 public:
+	std::vector<std::shared_ptr<FuncHook>> lambdaHooks;
+
 	static void Init();
 	static void Restore();
 	static void Enable();
@@ -96,7 +98,7 @@ private:
 	static void ClickFunc(__int64 a1, char a2, char a3, __int16 a4, __int16 a5, __int16 a6, __int16 a7, char a8);
 	static __int64 MoveInputHandler_tick(C_MoveInputHandler* _this, C_Entity* a2);
 	static __int64 ChestScreenController_tick(C_ChestScreenController* _this);
-	static __int64 GetGamma(__int64 a1);
+	static float GetGamma(uintptr_t* a1);
 	static bool Actor_isInWater(C_Entity* _this);
 	static void JumpPower(C_Entity* _this, float a2);
 	static __int64 MinecraftGame_onAppSuspended(__int64 _this);
@@ -202,9 +204,13 @@ public:
 	};
 
 	void enableHook(bool enable = true) {
-		int ret = enable ? MH_EnableHook(funcPtr) : MH_DisableHook(funcPtr);
-		if (ret != MH_OK)
-			logF("MH_EnableHook = %i", ret);
+		if (funcPtr != nullptr) {
+			int ret = enable ? MH_EnableHook(funcPtr) : MH_DisableHook(funcPtr);
+			if (ret != MH_OK)
+				logF("MH_EnableHook = %i", ret);
+		}else
+			logF("enableHook() called with nullptr func!");
+		
 	}
 
 	~FuncHook() {

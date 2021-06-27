@@ -8,7 +8,8 @@ typedef enum _ExternalDataType {
 	Invalid = 0,
 	EntityDataType,
 	Vector3DataType,
-	ModuleDataType
+	ModuleDataType,
+	Vector2DataType
 } ExternalDataType;
 
 struct ExternalDataStruct {
@@ -32,6 +33,15 @@ struct JVector3 : ExternalDataStruct {
 
 	JVector3(vec3_t set) {
 		this->dataType = Vector3DataType;
+		this->vec = set;
+	}
+};
+
+struct JVector2 : ExternalDataStruct {
+	vec2_t vec;
+
+	JVector2(vec2_t set) {
+		this->dataType = Vector2DataType;
 		this->vec = set;
 	}
 };
@@ -63,9 +73,15 @@ extern ScriptManager scriptMgr;
 	chok.throwTypeException(m); \
 	return JS_INVALID_REFERENCE
 
+#define THROW_IF_ERROR(code, m) \
+	if (code != JsNoError) {    \
+		THROW(m);				\
+	}
+
 #include "Functions/GameFunctions.h"
 #include "Functions/EntityFunctions.h"
 #include "Functions/GlobalFunctions.h"
+#include "Functions/Vector2Functions.h"
 #include "Functions/Vector3Functions.h"
 #include "Functions/LocalPlayerFunctions.h"
 #include "Functions/HorionFunctions.h"
@@ -73,6 +89,7 @@ extern ScriptManager scriptMgr;
 #include "Functions/ModuleManagerFunctions.h"
 #include "Functions/LevelFunctions.h"
 #include "Functions/DrawFunctions.h"
+#include "Functions/InventoryFunctions.h"
 
 #include "ScriptInstance.h"
 
@@ -82,8 +99,10 @@ class JavascriptModule;
 struct ContextObjects {
 public:
 	JsValueRef vec3Prototype = JS_INVALID_REFERENCE;
+	JsValueRef vec2Prototype = JS_INVALID_REFERENCE;
 	JsValueRef entityPrototype = JS_INVALID_REFERENCE;
 	JsValueRef localPlayerPrototype = JS_INVALID_REFERENCE;
+	JsValueRef inventoryObject = JS_INVALID_REFERENCE;
 	JsValueRef moduleManager = JS_INVALID_REFERENCE;
 	JsValueRef commandManager = JS_INVALID_REFERENCE;
 	JsValueRef drawUtils = JS_INVALID_REFERENCE;
@@ -98,12 +117,14 @@ private:
 
 	std::vector<std::unique_ptr<ScriptInstance>> scriptInstances;
 
-	void prepareGlobals(JsValueRef global);
+	void prepareGlobals(JsValueRef global, ContextObjects*);
 
 	void prepareVector3Prototype(JsValueRef global, ContextObjects*);
+	void prepareVector2Prototype(JsValueRef global, ContextObjects*);
 	void prepareEntityPrototype(JsValueRef proto, ContextObjects* objs);
 	void prepareLocalPlayerPrototype(JsValueRef proto, ContextObjects* objs);
 	
+	void prepareInventoryFunctions(JsValueRef proto, ContextObjects* objs);
 	void prepareGameFunctions(JsValueRef global, ContextObjects* objs);
 	void prepareHorionFunctions(JsValueRef global, ContextObjects* obj);
 	void prepareDrawFunctions(JsValueRef global, ContextObjects* obj);
@@ -117,6 +138,7 @@ public:
 	void prepareContext(JsContextRef* ctx, ContextObjects* obj);
 	JsValueRef prepareEntity(__int64 runtimeId, ContextObjects* obj);
 	JsValueRef prepareVector3(vec3_t vec, ContextObjects* obj);
+	JsValueRef prepareVector2(vec2_t vec, ContextObjects* obj);
 	JsValueRef prepareModule(std::shared_ptr<IModule> mod, ContextObjects* objs);
 	JsValueRef prepareJsModule(std::shared_ptr<JavascriptModule> mod, ContextObjects* objs);
 	JsValueRef getLocalPlayer(ContextObjects* obs);

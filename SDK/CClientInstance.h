@@ -13,11 +13,97 @@ public:
 	float* timer;  //0x00B0
 };
 
+class Tessellator;
+class C_Block;
+
+class BlockTessellator;
+class ResourceLocation {
+private:
+	char pad[0x28];
+	__int64 hashCode; // 0x28
+	char pad2[8];
+};
+
+class HashedString {
+private:
+	unsigned __int64 hash;
+	TextHolder text; // 0x0008
+
+public:
+	HashedString(const std::string& text) {
+		this->text.setText(text);
+		
+		this->computeHash();
+	}
+
+	void computeHash() {
+		hash = 0xCBF29CE484222325i64;
+		if (this->text.getTextLength() <= 0)
+			return;
+		char* textP = this->text.getText();
+		auto c = *textP;
+
+		do {
+			hash = c ^ 0x100000001B3i64 * hash;
+			c = *++textP;
+		} while (*textP);
+	}
+
+	unsigned __int64 getHash() {
+		return this->hash;
+	}
+};
+
+namespace mce {
+	class TextureGroup;
+	class MaterialPtr;
+	class Mesh {
+	public:
+		void renderMesh(__int64 screenContext, mce::MaterialPtr* material, size_t numTextures, __int64** textureArray);
+
+		template <size_t numTextures>
+		void renderMesh(__int64 screenContext, mce::MaterialPtr* material, std::array<__int64*, numTextures> textures) {
+			this->renderMesh(screenContext, material, numTextures, &textures[0]);
+		}
+	};
+	class TexturePtr {
+	private:
+		__int64* clientTexture;
+		char pad[0x8];
+		ResourceLocation resourceLocation; // 0x10
+
+	public:
+		__int64* getClientTexture() {
+			return this->clientTexture;
+		}
+	};
+	class MaterialPtr {
+	private:
+		std::shared_ptr<void> materialPtr;
+
+	public:
+		MaterialPtr(const std::string& materialName);
+	};
+	}
+
+
 class LevelRenderer {
 private:
-	char pad_0x0000[0x870];  //0x0000
+	char pad_0x0000[0x58];  //0x0000
 public:
-	vec3_t origin;  //0x0870
+	mce::TextureGroup* textureGroup; // 0x0058
+private:
+	char pad_0x0060[0xE0];  //0x0060
+public:
+	mce::TexturePtr atlasTexture; // 0x140
+private:
+	char pad_0x0188[0x150];  //0x0188
+public:
+	BlockTessellator* blockTessellator; // 0x02D8
+private:
+	char pad_0x02F0[0x5EC];  //0x02E0
+public:
+	vec3_t origin;  //0x0890
 
 	__int64 getLevelRendererPlayer(){
 		return reinterpret_cast<__int64>(this) + 0x310;
@@ -52,28 +138,25 @@ public:
 
 class MinecraftGame {
 private:
-	char filler[0x140];  //0x0000
+	char filler[256];  //0x0000
 public:
-	C_FontRepository* fontRepository; //0x140
+	C_FontRepository* fontRepository;  //0xF8
 private:
-	char pad_0x148[0x8]; //0x148
+	char pad_0x128[0x1F0];  //0x100
 public:
-	C_FontRepository* fontRepository1;  //0x150
-private:
-	char pad_0x128[0x108];  //0x148
-public:
-	bool canUseKeys;  //0x250
+	bool canUseKeys;  //0x2F0
+	// 0x2F0
 
 	C_Font* getTheGoodFontThankYou() {
 		return fontRepository->fontList->fontEntries[7].font;
 	};
 
 	C_Font* getOldFont() {
-		return fontRepository1->fontList->fontEntries[7].font;
+		return fontRepository->fontList->fontEntries[7].font;
 	};
 
 	C_Font* getTheBetterFontYes() {
-		return fontRepository->fontList->fontEntries[0].font;
+		return fontRepository->fontList->fontEntries[3].font;
 	}
 
 	const bool canUseKeybinds() {
@@ -145,32 +228,30 @@ private:
 	MinecraftGame* N0000080C;  //0x00A0
 public:
 	MinecraftGame* N0000080D;  //0x00A8
-private:
-	MinecraftGame* N0000080E;  //0x00B0
 public:
-	Minecraft* minecraft;  //0x00B8
+	Minecraft* minecraft;  //0x00B0
 private:
-	char pad_0x0068[0x8];  //0x00C0
+	char pad_0x0068[0x8];  //0x00B8
 public:
-	LevelRenderer* levelRenderer;  //0x00C8
+	LevelRenderer* levelRenderer;  //0x00C0
 private:
-	char pad_0x0078[0x8];  //0x00D0
+	char pad_0x0078[0x8];  //0x00C8
 public:
-	C_LoopbackPacketSender* loopbackPacketSender;  //0x00D8
+	C_LoopbackPacketSender* loopbackPacketSender;  //0x00D0
 private:
-	char pad_0x0088[0x18];  //0x00E0
+	char pad_0x0088[0x18];  //0x00D8
 public:
-	PtrToGameSettings1* ptr;  //0x00F8
+	PtrToGameSettings1* ptr;  //0x00F0
 private:
-	char pad_0x00B0[0x8];  //0x0100
+	char pad_0x00B0[0x8];  //0x00F8
 public:
-	HitDetectSystem* hitDetectSystem;  //0x0108
+	HitDetectSystem* hitDetectSystem;  //0x0100
 private:
-	char pad_0x00B8[0x30];  //0x0110
+	char pad_0x00B8[0x30];  //0x0108
 public:
-	C_LocalPlayer* localPlayer;  //0x0140
+	C_LocalPlayer* localPlayer;  //0x0138
 private:
-	char pad[0x380]; // 0x0148
+	char pad[0x380]; // 0x0140
 public:
 	struct {
 		char pad[0x238];
@@ -178,7 +259,7 @@ public:
 			__int64 materialPtr;
 			size_t refCount;
 		} entityLineMaterial;
-	} *itemInHandRenderer; // 0x04C8
+	} *itemInHandRenderer; // 0x04C0
 
 private:
 	virtual __int64 destructorClientInstance();
@@ -305,7 +386,11 @@ private:
 	virtual __int64 onGuiScaleOffsetChanged(void);
 	virtual __int64 onSafeZoneChanged(void);
 	virtual __int64 quit(std::string const&, std::string const&);
+
+public:
 	virtual __int64 getMinecraftGame(void) const;
+
+private:
 	virtual __int64 getAutomationClient(void) const;
 	virtual __int64 getScreenshotStreamer(void) const;
 	virtual __int64 getEventing(void) const;
@@ -322,6 +407,7 @@ private:
 	virtual __int64 getResourcePackManager(void) const;
 	virtual __int64 getSkinRepository(void) const;
 	virtual __int64 getSkinRepositoryClientInterface(void) const;
+	virtual __int64 sub_140630650(void) const;
 	virtual __int64 sub_1400CA400(void) const;
 	virtual __int64 getTextures(void) const;
 	virtual __int64 getStoreCacheTextures(void) const;
@@ -431,6 +517,8 @@ public:
 	virtual C_CameraManager* getCameraManager(void) const;
 private:
 	virtual __int64 sub_1400CCC08(void) const;
+
+public:
 	virtual __int64 getLightTexture(void);
 
 public:
@@ -497,6 +585,7 @@ private:
 	virtual __int64 getSceneFactory(void) const;
 	virtual __int64 getClientSceneStack(void) const;
 	virtual __int64 getClientSceneStack(void);
+	virtual __int64 sub_140634B30(void) const;
 	virtual __int64 getMainSceneStack(void);
 	virtual __int64 getMainSceneStack(void) const;
 	virtual __int64 getCurrentSceneStack(void) const;
@@ -514,6 +603,8 @@ private:
 	virtual __int64 getScreenTelemetry(void) const;
 	virtual __int64 getTopSceneType(void) const;
 	virtual __int64 getMobEffectsLayout(void);
+	virtual __int64 newFunc2(__int64 a2, __int64 a3, char a4);
+	virtual __int64 newFunc3(__int64 a2, __int64 a3);
 	virtual __int64 onMobEffectsChange(void);
 
 public:
@@ -716,19 +807,19 @@ public:
 	glmatrixf* getRefDef() {
 		uintptr_t _this = reinterpret_cast<uintptr_t>(this);
 		//logF("refderf %llX", _this + 0x258);
-		return reinterpret_cast<glmatrixf*>(_this + 0x2E8);
+		return reinterpret_cast<glmatrixf*>(_this + 0x2E0);
 	};
 
 	vec2_t* getMousePos() {
 		uintptr_t _this = reinterpret_cast<uintptr_t>(this);
-		return reinterpret_cast<vec2_t*>(_this + 0x450);
+		return reinterpret_cast<vec2_t*>(_this + 0x448);
 	}
 
 	vec2_t getFov() {
 		uintptr_t _this = reinterpret_cast<uintptr_t>(this);
 		vec2_t fov;
-		fov.x = *reinterpret_cast<float*>(_this + 0x650);
-		fov.y = *reinterpret_cast<float*>(_this + 0x664);
+		fov.x = *reinterpret_cast<float*>(_this + 0x658);
+		fov.y = *reinterpret_cast<float*>(_this + 0x66C);
 		return fov;
 	}
 

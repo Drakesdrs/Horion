@@ -4,7 +4,7 @@
 #include "../../../Utils/Logger.h"
 #include "../../../Utils/Utils.h"
 
-Reach::Reach() : IModule(0x0, Category::COMBAT, "Increases your reach") {
+Reach::Reach() : IModule(0, Category::COMBAT, "Increases your reach") {
 	this->registerFloatSetting("Reach Value", &this->reachValue, this->reachValue, 3.f, 7.f);
 }
 
@@ -25,10 +25,7 @@ void Reach::onEnable() {
 	static uintptr_t sigOffset = 0x0;
 	if (sigOffset == 0x0) {
 
-		if (g_Data.getVersion() == GAMEVERSION::g_1_16_0)
-			sigOffset = FindSignature("F3 0F 10 05 ? ? ? ? 0F 2F F8 76");
-		else
-			sigOffset = FindSignature("F3 0F 10 05 ? ? ? ? 44 0F 2F E8 76 0B");
+		sigOffset = FindSignature("F3 0F 59 ? ? ? ? ? 80 BE");
 
 		if (sigOffset != 0x0) {
 			int offset = *reinterpret_cast<int*>((sigOffset + 4));  // Get Offset from code

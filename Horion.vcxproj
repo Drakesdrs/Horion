@@ -108,13 +108,15 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LibraryPath>C:\Program Files %28x86%29\Microsoft DirectX SDK %28June 2010%29\Lib\x64;D:\ProgrammeX\Dxx\Lib\x64;$(ProjectDir)minhook;$(LibraryPath)</LibraryPath>
-    <IncludePath>D:\ProgrammeX\Dxx\Include;$(IncludePath)</IncludePath>
+    <IncludePath>D:\ProgrammeX\Dxx\Include;$(ProjectDir)include\glm;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LibraryPath>C:\Program Files %28x86%29\Microsoft Visual Studio\2017\Community\VC\Tools\MSVC\14.16.27023\lib\x64;$(ProjectDir)minhook;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64</LibraryPath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(ProjectDir)include\glm</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='BetaConf|x64'">
     <LibraryPath>C:\Program Files %28x86%29\Microsoft Visual Studio\2017\Community\VC\Tools\MSVC\14.16.27023\lib\x64;$(ProjectDir)minhook;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64</LibraryPath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(ProjectDir)include\glm</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -170,7 +172,7 @@
       <WholeProgramOptimization>false</WholeProgramOptimization>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <AdditionalOptions>/Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
-      <PreprocessorDefinitions>%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
     </ClCompile>
     <Link />
@@ -188,6 +190,7 @@
       <AdditionalOptions>/Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <WholeProgramOptimization>false</WholeProgramOptimization>
+      <PreprocessorDefinitions>_WINDLL;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>false</GenerateDebugInformation>
@@ -199,7 +202,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <DebugInformationFormat>None</DebugInformationFormat>
       <AdditionalOptions>/Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
-      <PreprocessorDefinitions>_BETA;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_BETA;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <WholeProgramOptimization>false</WholeProgramOptimization>
     </ClCompile>
@@ -260,7 +263,9 @@
     <ClCompile Include="Horion\Command\Commands\TeleportCommand.cpp" />
     <ClCompile Include="Horion\Command\Commands\TestCommand.cpp" />
     <ClCompile Include="Horion\Command\Commands\ToggleCommand.cpp" />
+    <ClCompile Include="Horion\Command\Commands\TopCommand.cpp" />
     <ClCompile Include="Horion\Command\Commands\UnbindCommand.cpp" />
+    <ClCompile Include="Horion\Command\Commands\WaypointCommand.cpp" />
     <ClCompile Include="Horion\Config\AccountInformation.cpp" />
     <ClCompile Include="Horion\Config\ConfigManager.cpp" />
     <ClCompile Include="Horion\DrawUtils.cpp" />
@@ -291,6 +296,7 @@
     <ClCompile Include="Horion\Module\Modules\ChestESP.cpp" />
     <ClCompile Include="Horion\Module\Modules\ChestStealer.cpp" />
     <ClCompile Include="Horion\Module\Modules\ClickGuiMod.cpp" />
+    <ClCompile Include="Horion\Module\Modules\Compass.cpp" />
     <ClCompile Include="Horion\Module\Modules\Crasher.cpp" />
     <ClCompile Include="Horion\Module\Modules\Criticals.cpp" />
     <ClCompile Include="Horion\Module\Modules\CrystalAura.cpp" />
@@ -311,7 +317,7 @@
     <ClCompile Include="Horion\Module\Modules\HighJump.cpp" />
     <ClCompile Include="Horion\Module\Modules\Hitbox.cpp" />
     <ClCompile Include="Horion\Module\Modules\HudModule.cpp" />
-    <ClCompile Include="Horion\Module\Modules\InfiniteBlockReach.cpp" />
+    <ClCompile Include="Horion\Module\Modules\ExtendedBlockReach.cpp" />
     <ClCompile Include="Horion\Module\Modules\InfiniteReach.cpp" />
     <ClCompile Include="Horion\Module\Modules\InstaBreak.cpp" />
     <ClCompile Include="Horion\Module\Modules\InventoryCleaner.cpp" />
@@ -336,21 +342,27 @@
     <ClCompile Include="Horion\Module\Modules\Nuker.cpp" />
     <ClCompile Include="Horion\Module\Modules\PacketLogger.cpp" />
     <ClCompile Include="Horion\Module\Modules\Phase.cpp" />
+    <ClCompile Include="Horion\Module\Modules\Radar.cpp" />
     <ClCompile Include="Horion\Module\Modules\RainbowSky.cpp" />
     <ClCompile Include="Horion\Module\Modules\Reach.cpp" />
     <ClCompile Include="Horion\Module\Modules\Scaffold.cpp" />
     <ClCompile Include="Horion\Module\Modules\Spammer.cpp" />
     <ClCompile Include="Horion\Module\Modules\Speed.cpp" />
+    <ClCompile Include="Horion\Module\Modules\Spider.cpp" />
     <ClCompile Include="Horion\Module\Modules\StackableItem.cpp" />
     <ClCompile Include="Horion\Module\Modules\Step.cpp" />
     <ClCompile Include="Horion\Module\Modules\Teams.cpp" />
     <ClCompile Include="Horion\Module\Modules\Teleport.cpp" />
     <ClCompile Include="Horion\Module\Modules\TestModule.cpp" />
     <ClCompile Include="Horion\Module\Modules\Timer.cpp" />
+    <ClCompile Include="Horion\Module\Modules\TimeChanger.cpp" />
     <ClCompile Include="Horion\Module\Modules\Tower.cpp" />
     <ClCompile Include="Horion\Module\Modules\Tracer.cpp" />
     <ClCompile Include="Horion\Module\Modules\TriggerBot.cpp" />
+	<ClCompile Include="Horion\Module\Modules\Twerk.cpp" />
+    <ClCompile Include="Horion\Module\Modules\VanillaPlus.cpp" />
     <ClCompile Include="Horion\Module\Modules\Velocity.cpp" />
+    <ClCompile Include="Horion\Module\Modules\Waypoints.cpp" />
     <ClCompile Include="Horion\Module\Modules\Xray.cpp" />
     <ClCompile Include="Horion\Module\Modules\Zoom.cpp" />
     <ClCompile Include="Horion\path\goals\JoeGoal.cpp" />
@@ -368,6 +380,7 @@
     <ClCompile Include="Horion\Scripting\Functions\GameFunctions.cpp" />
     <ClCompile Include="Horion\Scripting\Functions\GlobalFunctions.cpp" />
     <ClCompile Include="Horion\Scripting\Functions\HorionFunctions.cpp" />
+    <ClCompile Include="Horion\Scripting\Functions\InventoryFunctions.cpp" />
     <ClCompile Include="Horion\Scripting\Functions\LevelFunctions.cpp" />
     <ClCompile Include="Horion\Scripting\Functions\LocalPlayerFunctions.cpp" />
     <ClCompile Include="Horion\Scripting\Functions\ModuleManagerFunctions.cpp" />
@@ -375,6 +388,7 @@
     <ClCompile Include="Horion\Scripting\JsScriptModule.cpp" />
     <ClCompile Include="Horion\Scripting\ScriptInstance.cpp" />
     <ClCompile Include="Horion\Scripting\ScriptManager.cpp" />
+    <ClCompile Include="Horion\Scripting\Functions\Vector2Functions.cpp" />
     <ClCompile Include="Memory\GameData.cpp" />
     <ClCompile Include="Memory\Hooks.cpp" />
     <ClCompile Include="Memory\SlimMem.cpp" />
@@ -384,19 +398,23 @@
     <ClCompile Include="SDK\CClientInstance.cpp" />
     <ClCompile Include="SDK\CComplexInventoryTransaction.cpp" />
     <ClCompile Include="SDK\CEntity.cpp" />
+    <ClCompile Include="SDK\CGameMode.cpp" />
     <ClCompile Include="SDK\CInventory.cpp" />
     <ClCompile Include="SDK\CInventoryTransaction.cpp" />
     <ClCompile Include="SDK\CItem.cpp" />
     <ClCompile Include="SDK\CMinecraftUIRenderContext.cpp" />
     <ClCompile Include="SDK\CMoveInputHandler.cpp" />
     <ClCompile Include="SDK\CPacket.cpp" />
+    <ClCompile Include="SDK\MatrixStack.cpp" />
     <ClCompile Include="SDK\Tag.cpp" />
+    <ClCompile Include="SDK\Tessellator.cpp" />
     <ClCompile Include="SDK\TextHolder.cpp" />
     <ClCompile Include="Utils\Logger.cpp" />
     <ClCompile Include="Utils\SkinUtil.cpp" />
     <ClCompile Include="Utils\Target.cpp" />
     <ClCompile Include="Utils\TextFormat.cpp" />
     <ClCompile Include="Utils\Utils.cpp" />
+    <ClCompile Include="Utils\VoxelIntersector.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Horion\Command\CommandMgr.h" />
@@ -432,7 +450,9 @@
     <ClInclude Include="Horion\Command\Commands\TeleportCommand.h" />
     <ClInclude Include="Horion\Command\Commands\TestCommand.h" />
     <ClInclude Include="Horion\Command\Commands\ToggleCommand.h" />
+    <ClInclude Include="Horion\Command\Commands\TopCommand.h" />
     <ClInclude Include="Horion\Command\Commands\UnbindCommand.h" />
+    <ClInclude Include="Horion\Command\Commands\WaypointCommand.h" />
     <ClInclude Include="Horion\Config\AccountInformation.h" />
     <ClInclude Include="Horion\Config\ConfigManager.h" />
     <ClInclude Include="Horion\DrawUtils.h" />
@@ -463,6 +483,7 @@
     <ClInclude Include="Horion\Module\Modules\ChestESP.h" />
     <ClInclude Include="Horion\Module\Modules\ChestStealer.h" />
     <ClInclude Include="Horion\Module\Modules\ClickGuiMod.h" />
+    <ClInclude Include="Horion\Module\Modules\Compass.h" />
     <ClInclude Include="Horion\Module\Modules\Crasher.h" />
     <ClInclude Include="Horion\Module\Modules\Criticals.h" />
     <ClInclude Include="Horion\Module\Modules\CrystalAura.h" />
@@ -483,7 +504,7 @@
     <ClInclude Include="Horion\Module\Modules\HighJump.h" />
     <ClInclude Include="Horion\Module\Modules\Hitbox.h" />
     <ClInclude Include="Horion\Module\Modules\HudModule.h" />
-    <ClInclude Include="Horion\Module\Modules\InfiniteBlockReach.h" />
+    <ClInclude Include="Horion\Module\Modules\ExtendedBlockReach.h" />
     <ClInclude Include="Horion\Module\Modules\InfiniteReach.h" />
     <ClInclude Include="Horion\Module\Modules\InstaBreak.h" />
     <ClInclude Include="Horion\Module\Modules\InventoryCleaner.h" />
@@ -508,21 +529,27 @@
     <ClInclude Include="Horion\Module\Modules\Nuker.h" />
     <ClInclude Include="Horion\Module\Modules\PacketLogger.h" />
     <ClInclude Include="Horion\Module\Modules\Phase.h" />
+    <ClInclude Include="Horion\Module\Modules\Radar.h" />
     <ClInclude Include="Horion\Module\Modules\RainbowSky.h" />
     <ClInclude Include="Horion\Module\Modules\Reach.h" />
     <ClInclude Include="Horion\Module\Modules\Scaffold.h" />
     <ClInclude Include="Horion\Module\Modules\Spammer.h" />
     <ClInclude Include="Horion\Module\Modules\Speed.h" />
+    <ClInclude Include="Horion\Module\Modules\Spider.h" />
     <ClInclude Include="Horion\Module\Modules\StackableItem.h" />
     <ClInclude Include="Horion\Module\Modules\Step.h" />
     <ClInclude Include="Horion\Module\Modules\Teams.h" />
     <ClInclude Include="Horion\Module\Modules\Teleport.h" />
     <ClInclude Include="Horion\Module\Modules\TestModule.h" />
     <ClInclude Include="Horion\Module\Modules\Timer.h" />
+    <ClInclude Include="Horion\Module\Modules\TimeChanger.h" />
     <ClInclude Include="Horion\Module\Modules\Tower.h" />
     <ClInclude Include="Horion\Module\Modules\Tracer.h" />
     <ClInclude Include="Horion\Module\Modules\TriggerBot.h" />
+	<ClInclude Include="Horion\Module\Modules\Twerk.h" />
+    <ClInclude Include="Horion\Module\Modules\VanillaPlus.h" />
     <ClInclude Include="Horion\Module\Modules\Velocity.h" />
+    <ClInclude Include="Horion\Module\Modules\Waypoints.h" />
     <ClInclude Include="Horion\Module\Modules\Xray.h" />
     <ClInclude Include="Horion\Module\Modules\Zoom.h" />
     <ClInclude Include="Horion\path\goals\JoeGoal.h" />
@@ -540,6 +567,7 @@
     <ClInclude Include="Horion\Scripting\Functions\GameFunctions.h" />
     <ClInclude Include="Horion\Scripting\Functions\GlobalFunctions.h" />
     <ClInclude Include="Horion\Scripting\Functions\HorionFunctions.h" />
+    <ClInclude Include="Horion\Scripting\Functions\InventoryFunctions.h" />
     <ClInclude Include="Horion\Scripting\Functions\LevelFunctions.h" />
     <ClInclude Include="Horion\Scripting\Functions\LocalPlayerFunctions.h" />
     <ClInclude Include="Horion\Scripting\Functions\ModuleManagerFunctions.h" />
@@ -547,6 +575,7 @@
     <ClInclude Include="Horion\Scripting\JsScriptModule.h" />
     <ClInclude Include="Horion\Scripting\ScriptInstance.h" />
     <ClInclude Include="Horion\Scripting\ScriptManager.h" />
+    <ClInclude Include="Horion\Scripting\Functions\Vector2Functions.h" />
     <ClInclude Include="include\atlrx.h" />
     <ClInclude Include="include\chakra\ChakraCommon.h" />
     <ClInclude Include="include\chakra\ChakraCommonWindows.h" />
@@ -594,8 +623,10 @@
     <ClInclude Include="SDK\CPacket.h" />
     <ClInclude Include="SDK\CRakNetInstance.h" />
     <ClInclude Include="SDK\CUIScene.h" />
+    <ClInclude Include="SDK\MatrixStack.h" />
     <ClInclude Include="SDK\MojangsonToken.h" />
     <ClInclude Include="SDK\Tag.h" />
+    <ClInclude Include="SDK\Tessellator.h" />
     <ClInclude Include="SDK\TextHolder.h" />
     <ClInclude Include="Utils\ChakraHelper.h" />
     <ClInclude Include="Utils\DllHelper.h" />
@@ -607,6 +638,7 @@
     <ClInclude Include="Utils\Target.h" />
     <ClInclude Include="Utils\TextFormat.h" />
     <ClInclude Include="Utils\Utils.h" />
+    <ClInclude Include="Utils\VoxelIntersector.h" />
     <ClInclude Include="Utils\xorstr.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

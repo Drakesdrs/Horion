@@ -13,7 +13,7 @@ public:
 	bool isReplaceable;
 	bool isLiquid;  // 0x0008
 private:
-	//char pad2[0x3]; // 0x009
+	char pad2[0x3]; // 0x009
 public:
 	float translucency;  // 0x00C
 	bool isBlockingMotion;
@@ -29,21 +29,20 @@ class C_BlockSource;
 
 class C_BlockLegacy {
 public:
-	uintptr_t** Vtable;   //0x0000
-	TextHolder tileName;  // 0x0008
-	TextHolder name;      //0x0028
+	uintptr_t** Vtable;         //0x0000
+	class TextHolder tileName;  //0x0008
 private:
-	char pad_0x0048[0x78];  //0x0048
+	char pad_0028[8];  //0x0028
 public:
-	C_Material* material;  //0x00C0
+	class TextHolder name;  //0x0030
 private:
-	char pad_0x00C0[0x44];  //0x00C8
+	char pad_0050[136];  //0x0050
 public:
-	short blockId;  // 0x010C
+	class C_Material* material;  //0x00D8
 private:
-	char pad_0x0106[0xA];  //0x010E
+	char pad_00E0[104];  //0x00E0
 public:
-	AABB aabb;  //0x0110
+	int64_t blockId;  //0x0148
 
 	int liquidGetDepth(C_BlockSource*, const vec3_ti* pos);
 	void liquidGetFlow(vec3_t* flowOut, C_BlockSource*, const vec3_ti* pos);
@@ -52,9 +51,6 @@ public:
 };
 
 class C_Block {
-private:
-	uintptr_t** vtable;
-
 public:
 	uint8_t data; // 0x8
 
@@ -62,9 +58,12 @@ private:
 	char pad[0x7];
 
 public:
-	C_BlockLegacy** blockLegacy; // 0x10
+	C_BlockLegacy* blockLegacy; // 0x10
 
-	inline C_BlockLegacy* toLegacy() { return *blockLegacy; }
+	inline C_BlockLegacy* toLegacy() { return blockLegacy; }
+
+	virtual ~C_Block();
+	virtual int getRenderLayer();
 };
 
 class CompoundTag;

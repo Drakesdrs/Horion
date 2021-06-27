@@ -22,7 +22,7 @@ DWORD WINAPI keyThread(LPVOID lpParam) {
 		throw std::exception("Clickmap not allocated");
 
 	bool* keyMapAddr = nullptr;
-	uintptr_t sigOffset = FindSignature("48 8D 0D ?? ?? ?? ?? 89 1C 81 48");
+	uintptr_t sigOffset = FindSignature("48 8D 0D ?? ?? ?? ?? 89 1C B9");
 	if (sigOffset != 0x0) {
 		int offset = *reinterpret_cast<int*>((sigOffset + 3));                                   // Get Offset from code
 		keyMapAddr = reinterpret_cast<bool*>(sigOffset + offset + /*length of instruction*/ 7);  // Offset is relative
@@ -50,25 +50,6 @@ DWORD WINAPI keyThread(LPVOID lpParam) {
 				TabGui::onKeyUpdate((int)i, *newKey);
 				ClickGui::onKeyUpdate((int)i, *newKey);
 			}
-		}
-
-		if (*hidController != nullptr) {
-			for (uintptr_t key = 0; key < 5; key++) {
-				bool newKey = (*hidController)->clickMap[key];
-				bool* oldKey = reinterpret_cast<bool*>(clickMap + key);
-				if (newKey != *oldKey) {
-					ClickGui::onMouseClickUpdate((int)key, newKey);
-					HImGui.onMouseClickUpdate((int)key, newKey);
-					if (newKey) {
-						if ((int)key == 0)
-							g_Data.leftclickCount++;
-						else if ((int)key == 1)
-							g_Data.rightclickCount++;
-					}
-				}
-			}
-
-			memcpy(reinterpret_cast<void*>(clickMap), &(*hidController)->leftClickDown, 5);
 		}
 
 		memcpy_s(keyMap, 0xFF * 4, keyMapAddr, 0xFF * 4);
@@ -352,13 +333,13 @@ DWORD WINAPI start(LPVOID lpParam) {
 	CreateThread(nullptr, NULL, (LPTHREAD_START_ROUTINE)keyThread, lpParam, NULL, &keyThreadId);  // Checking Keypresses
 	logF("KeyT: %i", keyThreadId);
 
-	logF("Waiting for injector");
+	/*logF("Waiting for injector");
 	while (!g_Data.isInjectorConnectionActive()) {
 		Sleep(10);
 		if (!isRunning)
 			ExitThread(0);
 	}
-	logF("Injector found");
+	logF("Injector found");*/
 
 	cmdMgr->initCommands();
 	logF("Initialized command manager (1/3)");
@@ -419,7 +400,7 @@ BOOL __stdcall DllMain(HMODULE hModule,
 		if (g_Data.getLocalPlayer() != nullptr) {
 			C_GuiData* guiData = g_Data.getClientInstance()->getGuiData();
 			if (guiData != nullptr && !GameData::shouldHide())
-				guiData->displayClientMessageF("%sUninjected!", RED);
+				guiData->displayClientMessageF("%sEjected!", RED);
 		}
 		break;
 	}

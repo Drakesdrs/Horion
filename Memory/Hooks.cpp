@@ -2,6 +2,16 @@
 
 #include "../SDK/Tag.h"
 
+#include <algorithm>
+
+#include <glm/mat4x4.hpp>         // mat4
+#include <glm/trigonometric.hpp>  //radians
+
+#include <glm/ext/matrix_transform.hpp> // perspective, translate, rotate
+#include <glm/ext/matrix_relational.hpp>
+#include <glm/ext/matrix_clip_space.hpp>
+#include <glm/gtc/constants.hpp>
+
 Hooks g_Hooks;
 bool isTicked = false;
 bool overrideStyledReturn = false;
@@ -15,7 +25,7 @@ void Hooks::Init() {
 	{
 		// GameMode::vtable
 		{
-			uintptr_t sigOffset = FindSignature("48 8D 05 ?? ?? ?? ?? 48 89 01 33 D2 48 C7 41 ??");
+			uintptr_t sigOffset = FindSignature("48 8D 05 ? ? ? ? 48 8B D9 48 89 01 8B FA 48 8B 89 ? ? ? ? 48 85 C9 74 ? 48 8B 01 BA ? ? ? ? FF 10 48 8B 8B");
 			int offset = *reinterpret_cast<int*>(sigOffset + 3);
 			uintptr_t** gameModeVtable = reinterpret_cast<uintptr_t**>(sigOffset + offset + /*length of instruction*/ 7);
 			if (gameModeVtable == 0x0 || sigOffset == 0x0)
@@ -24,37 +34,35 @@ void Hooks::Init() {
 				g_Hooks.GameMode_startDestroyBlockHook = std::make_unique<FuncHook>(gameModeVtable[1], Hooks::GameMode_startDestroyBlock);
 
 				g_Hooks.GameMode_tickHook = std::make_unique<FuncHook>(gameModeVtable[9], Hooks::GameMode_tick);
-
+				
 				g_Hooks.GameMode_getPickRangeHook = std::make_unique<FuncHook>(gameModeVtable[10], Hooks::GameMode_getPickRange);
-
+				
 				g_Hooks.GameMode_attackHook = std::make_unique<FuncHook>(gameModeVtable[14], Hooks::GameMode_attack);
 			}
 		}
 
 		// BlockLegacy::vtable
 		{
-			//uintptr_t sigOffset = FindSignature("48 8D ?? ?? ?? ?? ?? 48 89 ?? 4C 39");  // BlockLegacy constructor
-			intptr_t sigOffset = FindSignature("48 8D 05 ? ? ? ? 48 89 01 4C 39 7A ? 75 1A 48 C7 45");  // BlockLegacy constructor
+			intptr_t sigOffset = FindSignature("48 8D 05 ? ? ? ? 48 89 01 4C 8B 72 ? 48 B9");  // BlockLegacy constructor
 			int offset = *reinterpret_cast<int*>(sigOffset + 3);
-			uintptr_t** blockLegacyVtable = reinterpret_cast<uintptr_t**>(sigOffset + offset + /*length of instruction*/ 7);
+			uintptr_t** blockLegacyVtable = reinterpret_cast<uintptr_t**>(sigOffset + offset + 7);
 			if (blockLegacyVtable == 0x0 || sigOffset == 0x0)
 				logF("C_BlockLegacy signature not working!!!");
 			else {
-				g_Hooks.BlockLegacy_getRenderLayerHook = std::make_unique<FuncHook>(blockLegacyVtable[125], Hooks::BlockLegacy_getRenderLayer);
-
-				g_Hooks.BlockLegacy_getLightEmissionHook = std::make_unique<FuncHook>(blockLegacyVtable[16], Hooks::BlockLegacy_getLightEmission);
+				g_Hooks.BlockLegacy_getRenderLayerHook = std::make_unique<FuncHook>(blockLegacyVtable[168], Hooks::BlockLegacy_getRenderLayer);
+				g_Hooks.BlockLegacy_getLightEmissionHook = std::make_unique<FuncHook>(blockLegacyVtable[171], Hooks::BlockLegacy_getLightEmission);
 			}
 		}
 
 		// LocalPlayer::vtable
 		{
-			uintptr_t sigOffset = FindSignature("48 8D 05 ?? ?? ?? ?? 48 89 01 48 8B 89 ?? ?? ?? ?? 48 8B 01 ?? ?? ?? ?? ?? ?? 90 48 8B 08");
+			uintptr_t sigOffset = FindSignature("48 8D 05 ?? ?? ?? ?? 48 89 07 48 8D 8F ?? ?? ?? ?? 48 8B 87");
 			int offset = *reinterpret_cast<int*>(sigOffset + 3);
 			uintptr_t** localPlayerVtable = reinterpret_cast<uintptr_t**>(sigOffset + offset + /*length of instruction*/ 7);
 			if (localPlayerVtable == 0x0 || sigOffset == 0x0)
 				logF("C_LocalPlayer signature not working!!!");
 			else {
-				g_Hooks.Actor_isInWaterHook = std::make_unique<FuncHook>(localPlayerVtable[61], Hooks::Actor_isInWater);
+				g_Hooks.Actor_isInWaterHook = std::make_unique<FuncHook>(localPlayerVtable[65], Hooks::Actor_isInWater);
 
 				g_Hooks.Actor_startSwimmingHook = std::make_unique<FuncHook>(localPlayerVtable[182], Hooks::Actor_startSwimming);
 
@@ -64,9 +72,9 @@ void Hooks::Init() {
 
 		// MoveInputHandler::vtable
 		{
-			uintptr_t sigOffset = FindSignature("48 8D 05 ?? ?? ?? ?? 48 89 03 ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? 48 8B 42 ?? 48 85 C0 74 04");
+			uintptr_t sigOffset = FindSignature("48 8D 0D ? ? ? ? 49 89 48 ? 49 89 80 ? ? ? ? 49 89 80 ? ? ? ? 48 39 87 ? ? ? ? 74 20 48 8B 8F");
 			int offset = *reinterpret_cast<int*>(sigOffset + 3);
-			uintptr_t** moveInputVtable = reinterpret_cast<uintptr_t**>(sigOffset + offset + /*length of instruction*/ 7);
+			uintptr_t** moveInputVtable = reinterpret_cast<uintptr_t**>(sigOffset + offset + 7);
 			if (moveInputVtable == 0x0 || sigOffset == 0x0)
 				logF("C_GameMode signature not working!!!");
 			else {
@@ -78,7 +86,7 @@ void Hooks::Init() {
 		{
 			uintptr_t sigOffset = FindSignature("48 8D 05 ?? ?? ?? ?? 49 89 06 49 8D 76 50");
 			int offset = *reinterpret_cast<int*>(sigOffset + 3);
-			uintptr_t** directoryPackVtable = reinterpret_cast<uintptr_t**>(sigOffset + offset + /*length of instruction*/ 7);
+			uintptr_t** directoryPackVtable = reinterpret_cast<uintptr_t**>(sigOffset + offset +  7);
 			
 			{
 				g_Hooks.DirectoryPackAccessStrategy__isTrustedHook = std::make_unique<FuncHook>(directoryPackVtable[6], Hooks::DirectoryPackAccessStrategy__isTrusted);
@@ -86,17 +94,17 @@ void Hooks::Init() {
 
 			uintptr_t sigOffset2 = FindSignature("48 8D 05 ?? ?? ?? ?? 48 89 03 49 8D 57");
 			int offset2 = *reinterpret_cast<int*>(sigOffset2 + 3);
-			uintptr_t** directoryPackVtable2 = reinterpret_cast<uintptr_t**>(sigOffset2 + offset2 + /*length of instruction*/ 7);
+			uintptr_t** directoryPackVtable2 = reinterpret_cast<uintptr_t**>(sigOffset2 + offset2 +  7);
 			
 			{
 				g_Hooks.ZipPackAccessStrategy__isTrustedHook = std::make_unique<FuncHook>(directoryPackVtable2[6], Hooks::ReturnTrue);
 			}
-			g_Hooks.SkinRepository___checkSignatureFileInPack = std::make_unique<FuncHook>(FindSignature("40 57 48 81 EC ? ? ? ? 48 C7 44 24 ? ? ? ? ? 48 89 9C 24 ? ? ? ? 48 8B 05 ? ? ? ? 48 33 C4 48 89 44 24 ? 48 8B 39 48 8B 59 ? 48 85 DB"), Hooks::ReturnTrue);			
+			g_Hooks.SkinRepository___checkSignatureFileInPack = std::make_unique<FuncHook>(FindSignature("48 89 5C 24 ? 57 48 81 EC ? ? ? ? 48 8B 05 ? ? ? ? 48 33 C4 48 89 44 24 ? 48 8B 39 48 8B 59 ? 48 85 DB"), Hooks::ReturnTrue);			
 		}
 	}
 
 	// d3d11
-	{
+	/*{
 		/*const auto hModDXGI = GetModuleHandle(L"DXGI.dll");
 		const auto hModD3D11 = GetModuleHandle(L"D3D11.dll");
 
@@ -156,12 +164,12 @@ void Hooks::Init() {
 		if (pSwapChain) {
 			logF("swap vtable: %llX", *pSwapChain);
 			pSwapChain->Release();
-		}*/
+		}*
 		
 		uintptr_t sigOffset = FindSignature("48 8B 0D ?? ?? ?? ?? 48 8B 91 ?? ?? ?? ?? E8");
 		if (sigOffset != 0x0) {
 			int startOffsetOffset = *reinterpret_cast<int*>((sigOffset + 3));
-			uintptr_t startOffset = sigOffset + startOffsetOffset + /*length of instruction*/ 7;  
+			uintptr_t startOffset = sigOffset + startOffsetOffset + /*length of instruction/ 7;  
 			size_t secondOffset = (size_t) *reinterpret_cast<int*>((sigOffset + 10));
 			auto swapChain = g_Data.getSlimMem()->ReadPtr<__int64>(startOffset, {0, secondOffset, 0x170});
 			auto vtable = *reinterpret_cast<uintptr_t**>(swapChain);
@@ -171,24 +179,24 @@ void Hooks::Init() {
 			g_Hooks.swapchain__presentHook = std::make_unique<FuncHook>(vtable[8], Hooks::swapChain__present);
 			g_Hooks.swapchain__resizeBuffersHook = std::make_unique<FuncHook>(vtable[13], Hooks::swapChain__ResizeBuffers);
 		}
-	}
+	}*/
 
 	// Signatures
 	{
-		void* surv_tick = reinterpret_cast<void*>(FindSignature("48 8B C4 55 57 41 56 48 8D 68 A1 48 ?? ?? ?? ?? ?? ?? 48 ?? ?? ?? ?? ?? ?? ?? 48 89 58 ?? 48 89 70 ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 45 ?? 48 8B F9 8B 41"));
+		void* surv_tick = reinterpret_cast<void*>(FindSignature("48 89 5C 24 10 48 89 74 24 18 55 57 41 56 48 8D 6C 24 ?? 48 81 EC ?? ?? ?? ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 45 ?? 48 8B F9 F3"));
 		g_Hooks.SurvivalMode_tickHook = std::make_unique<FuncHook>(surv_tick, Hooks::SurvivalMode_tick);
 
-		void* _sendChatMessage = reinterpret_cast<void*>(FindSignature("40 57 48 83 EC ?? 48 C7 44 24 ?? FE FF FF FF 48 89 9C 24 ?? ?? 00 00 48 8B D9 48 83 B9"));
+		void* _sendChatMessage = reinterpret_cast<void*>(FindSignature("48 89 5C 24 ? 48 89 74 24 ? 57 48 83 EC ? 48 8B D9 48 83 B9"));
 		g_Hooks.ChatScreenController_sendChatMessageHook = std::make_unique<FuncHook>(_sendChatMessage, Hooks::ChatScreenController_sendChatMessage);
 
-		void* _renderText = reinterpret_cast<void*>(FindSignature("48 8B C4 55 56 57 41 54 41 55 41 56 41 57 48 8D A8 ?? ?? ?? ?? 48 81 EC ?? ?? ?? ?? 48 C7 45 ?? FE FF FF FF 48 89 58 ?? 0F 29 70 ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 85 ?? ?? ?? ?? 48 89 54 24"));
+		void* _renderText = reinterpret_cast<void*>(FindSignature("48 8B C4 48 89 58 18 55 56 57 41 54 41 55 41 56 41 57 48 8D A8 ?? ?? ?? ?? 48 81 EC ?? ?? ?? ?? 0F 29 70 ?? 0F 29 78 ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 85 ?? ?? ?? ?? 4C 8B F2 48 89 54 24"));
 		g_Hooks.RenderTextHook = std::make_unique<FuncHook>(_renderText, Hooks::RenderText);
 		g_Hooks.RenderTextHook->enableHook();
 
-		void* setupRender = reinterpret_cast<void*>(FindSignature("40 57 48 ?? ?? ?? ?? ?? ?? 48 ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 ?? ?? ?? ?? ?? ?? ?? ?? 48 8B DA 48 8B F9 33 D2 ?? ?? ?? ?? ?? ?? 48 8D 4C 24 30 E8 ?? ?? ?? ?? 4C 8B CF 4C 8B C3 48 8B 57 ?? 48 8D 4C 24"));
+		void* setupRender = reinterpret_cast<void*>(FindSignature("48 89 5C 24 10 57 48 81 EC ?? ?? ?? ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 84 24 ?? ?? ?? ?? 48 8B DA 48 8B F9 33 D2 41 B8"));
 		g_Hooks.UIScene_setupAndRenderHook = std::make_unique<FuncHook>(setupRender, Hooks::UIScene_setupAndRender);
 
-		void* render = reinterpret_cast<void*>(FindSignature("40 57 48 81 EC ?? ?? ?? ?? 48 C7 44 24 ?? ?? ?? ?? ?? 48 89 9C 24 ?? ?? ?? ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 84 24 ?? ?? ?? ?? 48 8B DA 48 8B F9 B9 ?? ?? ?? ?? 65 48 8B 04 25 ?? ?? ?? ?? 48 8B 10 8B 04 11 39 05"));
+		void* render = reinterpret_cast<void*>(FindSignature("48 89 5C 24 18 56 57 41 56 48 81 EC ?? ?? ?? ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 84 24 ?? ?? ?? ?? 48 8B FA 48 8B D9 41"));
 		g_Hooks.UIScene_renderHook = std::make_unique<FuncHook>(render, Hooks::UIScene_render);
 
 		void* fogColorFunc = reinterpret_cast<void*>(FindSignature("41 0F 10 08 48 8B C2 0F"));
@@ -197,7 +205,7 @@ void Hooks::Init() {
 		void* timeOfDay = reinterpret_cast<void*>(FindSignature("44 8B C2 B8 F1 19 76 05"));
 		g_Hooks.Dimension_getTimeOfDayHook = std::make_unique<FuncHook>(timeOfDay, Hooks::Dimension_getTimeOfDay);
 
-		void* chestTick = reinterpret_cast<void*>(FindSignature("40 53 57 48 83 EC ?? 48 8B 41 ?? 48 8B FA 48 89 6C 24 ?? 48 8B D9 4C 89 74 24 ?? 48 85 C0"));
+		void* chestTick = reinterpret_cast<void*>(FindSignature("40 53 57 48 83 EC ? 48 83 79"));
 		g_Hooks.ChestBlockActor_tickHook = std::make_unique<FuncHook>(chestTick, Hooks::ChestBlockActor_tick);
 
 		void* lerpFunc = reinterpret_cast<void*>(FindSignature("8B 02 89 81 ?? 04 ?? ?? 8B 42 04 89 81 ?? ?? ?? ?? 8B 42 08 89 81 ?? ?? ?? ?? C3"));
@@ -218,28 +226,29 @@ void Hooks::Init() {
 		void* tick_entityList = reinterpret_cast<void*>(FindSignature("48 89 ?? ?? ?? 57 48 83 EC ?? 48 8B ?? E8 ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? 48 8B D8 ?? ?? ?? ?? ?? ?? 48 99"));
 		g_Hooks.MultiLevelPlayer_tickHook = std::make_unique<FuncHook>(tick_entityList, Hooks::MultiLevelPlayer_tick);
 
-		void* keyMouseFunc = reinterpret_cast<void*>(FindSignature("40 55 56 57 41 54 41 55 41 56 41 57 48 8B EC 48 ?? ?? ?? ?? ?? ?? 48 ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? 0F 29 74 24 70 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 45 E0 49 8B F8 48 8B F1 45 33 ED 41 8B DD 89 5D DC 49 8B C8 E8"));
+		void* keyMouseFunc = reinterpret_cast<void*>(FindSignature("48 89 5C 24 ? 55 56 57 41 54 41 55 41 56 41 57 48 8B EC 48 81 EC ? ? ? ? 0F 29 74 24 ? 0F 29 7C 24 ? 48 8B 05 ? ? ? ? 48 33 C4 48 89 45 ? 49 8B F0"));
 		g_Hooks.HIDController_keyMouseHook = std::make_unique<FuncHook>(keyMouseFunc, Hooks::HIDController_keyMouse);
 
-		void* renderLevel = reinterpret_cast<void*>(FindSignature("48 8B C4 57 48 81 EC ?? ?? ?? ?? 48 C7 44 24 20 FE FF FF FF 48 89 58 ?? 48 89 70 ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 84 24 ?? ?? ?? ?? 49 8B F8 48 8B DA"));
+		void* renderLevel = reinterpret_cast<void*>(FindSignature("48 89 5C 24 10 48 89 74 24 20 57 48 81 EC ?? ?? ?? ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 84 24 ?? ?? ?? ?? 49 8B F8 48 8B DA"));
 		g_Hooks.LevelRenderer_renderLevelHook = std::make_unique<FuncHook>(renderLevel, Hooks::LevelRenderer_renderLevel);
 
-		void* clickHook = reinterpret_cast<void*>(FindSignature("48 8B C4 48 89 58 ?? 48 89 68 ?? 48 89 70 ?? 57 41 54 41 55 41 56 41 57 48 83 EC 60 44 ?? ?? ?? ?? ?? ?? ?? ?? 33 F6"));
+		void* clickHook = reinterpret_cast<void*>(FindSignature("48 8B C4 48 89 58 ? 48 89 68 ? 48 89 70 ? 57 41 54 41 55 41 56 41 57 48 83 EC ? 44 0F B7 BC 24 ? ? ? ? 48 8B D9"));
 		g_Hooks.ClickFuncHook = std::make_unique<FuncHook>(clickHook, Hooks::ClickFunc);
 
 		void* chestScreenControllerTick = reinterpret_cast<void*>(FindSignature("48 89 5C 24 08 57 48 83 EC 20 48 8B F9 E8 ?? ?? ?? ?? 48 8B 17 48 8B CF 8B D8 FF 92 ?? ?? ?? ?? 84 C0 74 31"));
 		g_Hooks.ChestScreenController_tickHook = std::make_unique<FuncHook>(chestScreenControllerTick, Hooks::ChestScreenController_tick);
 
-		void* fullbright = reinterpret_cast<void*>(FindSignature("40 57 48 83 EC ?? 48 C7 44 24 ?? ? ?? ? ?? 48 89 5C 24 ?? 48 89 74 24 ?? 48 8B 05 ?? ? ?? ? 48 33 C4 48 89 44 24 ?? 33 C0 48 89 44 24 ?? 48 89 44 24 ?? 48 8B 01 48 8D 54 24 ?? FF 90"));
+		void* fullbright = reinterpret_cast<void*>(FindSignature("48 83 EC ? 80 B9 ? ? ? ? ? 48 8D 54 24 ? 74 ? 41 B8 ? ? ? ? E8 ? ? ? ? 48 8B 10 48 85 D2 74 ? 48 8B 42 ? 48 8B 88 ? ? ? ? 48 85 C9 74 ? E8 ? ? ? ? 48 83 C4 ? C3 F3 0F 10 42"));
 		g_Hooks.GetGammaHook = std::make_unique<FuncHook>(fullbright, Hooks::GetGamma);
 
-		void* jump = reinterpret_cast<void*>(FindSignature("40 57 48 83 EC ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 44 24 ?? 48 8B 01 48 8B F9 0F 29 74 24"));
+		// Mob::_jumpFromGround
+		void* jump = reinterpret_cast<void*>(FindSignature("48 89 5C 24 10 57 48 83 EC ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 44 24 ?? 48 8B 19 48 8D"));
 		g_Hooks.JumpPowerHook = std::make_unique<FuncHook>(jump, Hooks::JumpPower);
 
-		void* onAppSuspended = reinterpret_cast<void*>(FindSignature("48 8B C4 55 48 8B EC 48 83 EC ? 48 C7 45 ? ? ? ? ? 48 89 58 ? 48 89 70 ? 48 89 78 ? 48 8B F1 E8 ? ? ? ? 48 8B D8 48 8B C8"));
+		void* onAppSuspended = reinterpret_cast<void*>(FindSignature("48 89 5C 24 ? 48 89 74 24 ? 55 57 41 56 48 8B EC 48 83 EC ? 48 8B F1 E8"));
 		g_Hooks.MinecraftGame_onAppSuspendedHook = std::make_unique<FuncHook>(onAppSuspended, Hooks::MinecraftGame_onAppSuspended);
 
-		void* RakNetInstance__tick = reinterpret_cast<void*>(FindSignature("48 8B C4 55 41 56 41 57 48 8D A8 ?? ?? ?? ?? 48 81 EC ?? ?? ?? ?? 48 C7 45 ?? ?? ?? ?? ?? 48 89 58 ?? 48 89 70 ?? 48 89 78 ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 85 ?? ?? ?? ?? 48 8B F1 48 C7 85 ?? ?? ?? ?? ?? ?? ?? ?? 48 8D 95 ?? ?? ?? ?? 48 8B 89"));
+		void* RakNetInstance__tick = reinterpret_cast<void*>(FindSignature("48 89 5C 24 10 48 89 74 24 18 55 57 41 54 41 56 41 57 48 8D ?? 24 ?? ?? ?? ?? 48 81 EC ?? ?? ?? ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 85 ?? ?? ?? ?? 48 8B F9 45 33 E4 4C"));
 		g_Hooks.RakNetInstance_tickHook = std::make_unique<FuncHook>(RakNetInstance__tick, Hooks::RakNetInstance_tick);
 
 		void* ConnectionRequest__create = reinterpret_cast<void*>(FindSignature("40 55 53 56 57 41 54 41 55 41 56 41 57 48 8D AC 24 ?? ?? ?? ?? 48 81 EC ?? ?? ?? ?? 48 C7 45 ?? FE FF FF FF 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 85 ?? ?? ?? ?? 49 8B D9 4D 8B F8"));
@@ -248,13 +257,13 @@ void Hooks::Init() {
 		void* PaintingRenderer__renderAddr = reinterpret_cast<void*>(FindSignature("48 8B C4 57 41 54 41 55 41 56 41 57 48 ?? ?? ?? ?? ?? ?? 48 ?? ?? ?? ?? ?? ?? ?? ?? 48 89 58 ?? 48 89 68 ?? 48 89 70 ?? 4D 8B F0 4C 8B FA 48 8B F1 B9 ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ??"));
 		g_Hooks.PaintingRenderer__renderHook = std::make_unique<FuncHook>(PaintingRenderer__renderAddr, Hooks::PaintingRenderer__render);
 
-		void* _getSkinPack = reinterpret_cast<void*>(FindSignature("40 55 56 57 41 54 41 55 41 56 41 57 48 8D AC 24 ? ? ? ? B8 ? ? ? ? E8 ? ? ? ? 48 2B E0 48 C7 85 ? ? ? ? ? ? ? ? 48 89 9C 24 ? ? ? ? 48 8B 05 ? ? ? ? 48 33 C4 48 89 85 ? ? ? ? 48 8B F2"));
+		void* _getSkinPack = reinterpret_cast<void*>(FindSignature("48 89 5C 24 ? 55 56 57 41 54 41 55 41 56 41 57 48 8D AC 24 ? ? ? ? B8 ? ? ? ? E8 ? ? ? ? 48 2B E0 48 8B 05 ? ? ? ? 48 33 C4 48 89 85 ? ? ? ? 4C 8B E2 48 8B F1"));
 		g_Hooks.SkinRepository___loadSkinPackHook = std::make_unique<FuncHook>(_getSkinPack, Hooks::SkinRepository___loadSkinPack);
 		
-		void* _toStyledString = reinterpret_cast<void*>(FindSignature("40 55 56 57 48 81 EC ?? ?? ?? ?? 48 C7 44 24 ?? FE FF FF FF 48 89 9C 24 ?? ?? ?? ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 84 24 ?? ?? ?? ?? 48 8B FA 48 8B D9 48 89 54 24 ?? 33 D2"));
+		void* _toStyledString = reinterpret_cast<void*>(FindSignature("48 89 5C 24 ? 48 89 74 24 ? 57 48 81 EC ? ? ? ? 49 8B D8 48 8B F9"));
 		g_Hooks.toStyledStringHook = std::make_unique<FuncHook>(_toStyledString, Hooks::toStyledString);
 		 
-		void* InGamePlayScreen___renderLevel = reinterpret_cast<void*>(FindSignature("48 8B C4 55 56 57 41 56 41 57 48 81 EC ?? ?? ?? ?? 48 C7 44 24 ?? FE FF FF FF 48 89 58 ?? 0F 29 70 ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 84 24 ?? ?? ?? ?? 49"));
+		void* InGamePlayScreen___renderLevel = reinterpret_cast<void*>(FindSignature("48 89 5C 24 20 55 56 57 41 54 41 55 41 56 41 57 48 8D AC 24 ?? ?? ?? ?? 48 81 EC ?? ?? ?? ?? 0F 29 B4 24 ?? ?? ?? ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 85 ?? ?? ?? ?? 49 8B D8 4C"));
 		g_Hooks.InGamePlayScreen___renderLevelHook = std::make_unique<FuncHook>(InGamePlayScreen___renderLevel, Hooks::InGamePlayScreen___renderLevel);
 
 #ifdef TEST_DEBUG
@@ -262,23 +271,43 @@ void Hooks::Init() {
 		g_Hooks.InventoryTransactionManager__addActionHook = std::make_unique<FuncHook>(addAction, Hooks::InventoryTransactionManager__addAction);
 #endif
 		
-		if(g_Data.getVersion() == GAMEVERSION::g_1_16_0)
-			void* prepFeaturedServers = reinterpret_cast<void*>(FindSignature("48 8B C4 55 57 41 56 48 8D ?? ?? 48 81 EC ?? ?? ?? ?? 48 C7 44 24 ?? FE FF FF FF 48 89 58 ?? 48 89 70 ?? 0F 29 70 ?? 48 8B 05"));
-		else
-			void* prepFeaturedServers = reinterpret_cast<void*>(FindSignature("48 8B C4 55 48 8D 68 98 48 81 EC ? ? ? ? 48 C7 44 24 ? ? ? ? ? 48 89 58 10 48 89 78 18 0F 29 70 E8 48 8B 05 ? ? ? ? 48 33 C4"));
-		//g_Hooks.prepFeaturedServersHook = std::make_unique<FuncHook>(prepFeaturedServers, Hooks::prepFeaturedServers);
-		
-		void* prepFeaturedServersFirstTime = reinterpret_cast<void*>(FindSignature("48 8B C4 57 41 54 41 55 41 56 41 57 48 83 EC ?? 48 C7 40 ?? FE FF FF FF 48 89 58 ?? 48 89 68 ?? 48 89 70 ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 44 24 ?? 48 8B FA"));
-		//g_Hooks.prepFeaturedServersFirstTimeHook = std::make_unique<FuncHook>(prepFeaturedServersFirstTime, Hooks::prepFeaturedServersFirstTime);
-
 		void* localPlayerUpdateFromCam = reinterpret_cast<void*>(FindSignature("48 89 5C 24 ?? 57 48 83 EC ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 44 24 ?? 80 BA"));
 		g_Hooks.LocalPlayer__updateFromCameraHook = std::make_unique<FuncHook>(localPlayerUpdateFromCam, Hooks::LocalPlayer__updateFromCamera);
 
 		void* MobIsImmobile = reinterpret_cast<void*>(FindSignature("40 53 48 83 EC ? 80 B9 ? ? ? ? ? 48 8B D9 75 5E"));
 		g_Hooks.Mob__isImmobileHook = std::make_unique<FuncHook>(MobIsImmobile, Hooks::Mob__isImmobile);
 
-		void* renderNameTags = reinterpret_cast<void*>(FindSignature("48 8B C4 55 56 57 41 54 41 55 41 56 41 57 48 8D 6C 24 ? 48 81 EC ? ? ? ? 48 C7 45 ? ? ? ? ? 48 89 58 ? 0F 29 70 ? 0F 29 78 ? 44 0F 29 40 ? 44 0F 29 48 ? 48 8B 05 ? ? ? ? 48 33 C4"));
-		g_Hooks.LevelRendererPlayer__renderNameTagsHook = std::make_unique<FuncHook>(renderNameTags,Hooks::LevelRendererPlayer__renderNameTags);
+		void* renderNameTags = reinterpret_cast<void*>(FindSignature("4C 8B DC 49 89 5B ? 55 56 57 41 54 41 55 41 56 41 57 48 81 EC ? ? ? ? 41 0F 29 73 ? 41 0F 29 7B ? 45 0F 29 43 ? 48 8B 05"));
+		g_Hooks.LevelRendererPlayer__renderNameTagsHook = std::make_unique<FuncHook>(renderNameTags, Hooks::LevelRendererPlayer__renderNameTags);
+	
+		static constexpr auto counterStart = __COUNTER__ + 1;
+		#define lambda_counter (__COUNTER__ - counterStart)
+		
+		void* levelRendererBobView = reinterpret_cast<void*>(FindSignature("48 89 5C 24 ?? 57 48 81 EC ?? ?? ?? ?? 48 8B D9 0F 29 B4 24 ?? ?? ?? ?? 48 8B 89"));
+
+		static auto bobViewHookF = [](__int64 _this, glm::mat4& matrix, float lerpT){
+			static auto origFunc = g_Hooks.lambdaHooks.at(lambda_counter)->GetFastcall<void, __int64, glm::mat4&, float>();
+			
+			/*auto p = g_Data.getLocalPlayer();
+			float degrees = fmodf(p->getPosOld()->lerp(p->getPos(), lerpT).x, 5) - 2.5f;
+			degrees *= 180 / 2.5f;
+
+			auto pos = g_Data.getClientInstance()->levelRenderer->origin;
+			
+			glm::mat4 View = matrix;
+			
+			matrix = View;
+			//matrix = glm::rotate<float>(matrix, glm::radians<float>(degrees), glm::vec3(0, 0, 1));*/
+			return origFunc(_this, matrix, lerpT);
+		};
+		
+		std::shared_ptr<FuncHook> bobViewHook = std::make_shared<FuncHook>(levelRendererBobView, (decltype(&bobViewHookF.operator()))bobViewHookF);
+
+		g_Hooks.lambdaHooks.push_back(bobViewHook);
+
+		#undef lambda_counter
+
+		logF("Hooks initialized");
 	}
 
 // clang-format on
@@ -290,7 +319,9 @@ void Hooks::Restore() {
 }
 
 void Hooks::Enable() {
+	logF("Hooks enabled");
 	MH_EnableHook(MH_ALL_HOOKS);
+	
 }
 
 void Hooks::GameMode_tick(C_GameMode* _this) {
@@ -315,40 +346,38 @@ void Hooks::SurvivalMode_tick(C_GameMode* _this) {
 void Hooks::ChatScreenController_sendChatMessage(uint8_t* _this) {
 	static auto oSendMessage = g_Hooks.ChatScreenController_sendChatMessageHook->GetFastcall<void, void*>();
 
-	using addCommandToChatHistory_t = void(__fastcall*)(__int64, char*);
-	static addCommandToChatHistory_t addCommandToChatHistory = reinterpret_cast<addCommandToChatHistory_t>(FindSignature("48 89 5C 24 ?? 57 48 83 EC ?? 48 83 79 ?? ?? 48 8B FA 48 8B D9 76 46 48 8B 41 ?? 48 89 74 24 ?? 33 F6"));
+	using addCommandToChatHistory_t = void(__fastcall*)(uint8_t*, TextHolder*);
+	static addCommandToChatHistory_t addCommandToChatHistory = reinterpret_cast<addCommandToChatHistory_t>(FindSignature("48 89 5C 24 08 48 89 74 24 10 57 48 83 EC ?? 48 8B 99 ?? ?? ?? ?? 48 8B F2 80"));
 
-	uintptr_t* textLength = reinterpret_cast<uintptr_t*>(_this + 0xA80);
-	if (*textLength) {
-		char* message = reinterpret_cast<char*>(_this + 0xA70);
-		if (*reinterpret_cast<__int64*>(_this + 0xA88) >= 0x10)
-			message = *reinterpret_cast<char**>(message);
+	TextHolder* messageHolder = reinterpret_cast<TextHolder*>(_this + 0xA70);
+	if (messageHolder->getTextLength() > 0) {
+		char* message = messageHolder->getText();
 
 		if (*message == cmdMgr->prefix) {
 			cmdMgr->execute(message);
 
-			__int64 a1 = 0;
-			if (g_Data.getVersion() == GAMEVERSION::g_1_16_20)
-				a1 = (*(__int64(__cdecl**)(__int64))(**(__int64**)(*(__int64*)(_this + 0xA58) + 0x20i64) + 0x968i64))(*(__int64*)(*(__int64*)(_this + 0xA58) + 0x20i64));
-			else
-				a1 = (*(__int64(__cdecl**)(__int64))(**(__int64**)(*(__int64*)(_this + 0xA58) + 0x20i64) + 0x960i64))(*(__int64*)(*(__int64*)(_this + 0xA58) + 0x20i64));
-
-			addCommandToChatHistory(a1, (char*)(_this + 0xA70));  // This will put the command in the chat history (Arrow up/down)
+			addCommandToChatHistory(_this, messageHolder);  // This will put the command in the chat history (Arrow up/down)
 
 			__int64 v17 = 0;
 			__int64* v15 = *(__int64**)(*(__int64*)(_this + 0xA58) + 0x20i64);
 			__int64 v16 = *v15;
 
 			if (*(BYTE*)(_this + 0xA9A))
-				v17 = (*(__int64(__cdecl**)(__int64*))(v16 + 0x968))(v15);
+				v17 = (*(__int64(__cdecl**)(__int64*))(v16 + 0x990))(v15);
 			else
-				v17 = (*(__int64(__cdecl**)(__int64*))(v16 + 0x960))(v15);
+				v17 = (*(__int64(__cdecl**)(__int64*))(v16 + 0x988))(v15);
 			*(DWORD*)(_this + 0xA94) = *(DWORD*)(v17 + 0x20);
 
-			*reinterpret_cast<__int64*>(_this + 0xA80) = 0i64;
-			*message = 0x0;     // Remove command in textbox
-			*textLength = 0x0;  // text length
+			messageHolder->resetWithoutDelete();
 			return;
+		} else if (*message == '.') {
+			// maybe the user forgot his prefix, give him some helpful advice
+			static bool helpedUser = false;
+			if (!helpedUser) {
+				helpedUser = true;
+				g_Data.getClientInstance()->getGuiData()->displayClientMessageF("%sYour Horion prefix is: \"%s%c%s\"", RED, YELLOW, cmdMgr->prefix, RED);
+				g_Data.getClientInstance()->getGuiData()->displayClientMessageF("%sEnter \"%s%cprefix .%s\" to reset your prefix", RED, YELLOW, cmdMgr->prefix, RED);
+			}
 		}
 	}
 	oSendMessage(_this);
@@ -372,9 +401,10 @@ __int64 Hooks::UIScene_render(C_UIScene* uiscene, __int64 screencontext) {
 	TextHolder alloc = {};
 	uiscene->getScreenName(&alloc);
 
-	if (alloc.getTextLength() < 100)
+	if (alloc.getTextLength() < 100) {
 		strcpy_s(g_Hooks.currentScreenName, alloc.getText());
-
+	}
+	
 	if (!g_Hooks.shouldRender) {
 		g_Hooks.shouldRender = alwaysRender || (strcmp(alloc.getText(), "start_screen") == 0 || (alloc.getTextLength() >= 11 && strncmp(alloc.getText(), "play_screen", 11)) == 0);
 	}
@@ -397,15 +427,20 @@ __int64 Hooks::RenderText(__int64 a1, C_MinecraftUIRenderContext* renderCtx) {
 			QueryPerformanceFrequency(&frequency);
 			QueryPerformanceCounter(&start);
 		}
-		if (!g_Data.isInjectorConnectionActive()) {
+		static bool hasSentWarning = false;
+		if (!g_Data.isInjectorConnectionActive() && !hasSentWarning) {
+			
 			__int64 retval = oText(a1, renderCtx);
 
 			LARGE_INTEGER end, elapsed;
 			QueryPerformanceCounter(&end);
 			elapsed.QuadPart = end.QuadPart - start.QuadPart;
 			float elapsedFlot = (float)elapsed.QuadPart / frequency.QuadPart;
-			if (elapsedFlot > 1.5f) {
-				vec2_t windowSize = dat->windowSize;
+			if (elapsedFlot > 1.5f && !hasSentWarning) {
+				hasSentWarning = true;
+				auto box = g_Data.addInfoBox("Warning", "Your injector doesn't seem to connect to Horion correctly.\nYou can ignore this, but some features may not work as expected.");
+				box->closeTimer = 5;
+				/*vec2_t windowSize = dat->windowSize;
 
 				DrawUtils::fillRectangle(vec4_t(0, 0, windowSize.x, windowSize.y), MC_Color(0.2f, 0.2f, 0.2f), 0.8f);
 
@@ -417,10 +452,11 @@ __int64 Hooks::RenderText(__int64 a1, C_MinecraftUIRenderContext* renderCtx) {
 				text = "Uninject by holding down CTRL + L";
 				DrawUtils::drawText(vec2_t(windowSize.x / 2 - DrawUtils::getTextWidth(&text, 0.7f) / 2, windowSize.y * 0.8f), &text, MC_Color(), 0.7f);
 
-				DrawUtils::flush();
+				DrawUtils::flush();*/
 			}
 
-			return retval;
+			if(!hasSentWarning) // Wait for injector, it might connect in time
+				return retval;
 		} else
 			wasConnectedBefore = true;
 	}
@@ -455,9 +491,9 @@ __int64 Hooks::RenderText(__int64 a1, C_MinecraftUIRenderContext* renderCtx) {
 	// Rainbow color updates
 	{
 		Utils::ApplyRainbow(rcolors);  // Increase Hue of rainbow color array
-		disabledRcolors[0] = min(1, rcolors[0] * 0.4f + 0.2f);
-		disabledRcolors[1] = min(1, rcolors[1] * 0.4f + 0.2f);
-		disabledRcolors[2] = min(1, rcolors[2] * 0.4f + 0.2f);
+		disabledRcolors[0] = std::min(1.f, rcolors[0] * 0.4f + 0.2f);
+		disabledRcolors[1] = std::min(1.f, rcolors[1] * 0.4f + 0.2f);
+		disabledRcolors[2] = std::min(1.f, rcolors[2] * 0.4f + 0.2f);
 		disabledRcolors[3] = 1;
 	}
 
@@ -476,7 +512,7 @@ __int64 Hooks::RenderText(__int64 a1, C_MinecraftUIRenderContext* renderCtx) {
 			}*/
 
 			// Draw Custom Geo Button
-			if (g_Data.allowWIPFeatures()) {
+			if (g_Data.allowWIPFeatures() && g_Data.isInjectorConnectionActive()) {
 				if (HImGui.Button("Load Script Folder", vec2_t(wid.x * (0.765f - 0.5f), wid.y * 0.92f), true)) {
 					HorionDataPacket packet;
 					packet.cmd = CMD_FOLDERCHOOSER;
@@ -825,9 +861,9 @@ __int64 Hooks::RenderText(__int64 a1, C_MinecraftUIRenderContext* renderCtx) {
 			std::string substring = box->message;
 			while (lines < 5) {
 				auto brea = substring.find("\n");
-				if (brea == std::string::npos)
+				if (brea == std::string::npos || brea + 1 >= substring.size())
 					break;
-				substring = substring.substr(brea);
+				substring = substring.substr(brea + 1);
 				lines++;
 			}
 			if (box->message.size() == 0)
@@ -841,9 +877,9 @@ __int64 Hooks::RenderText(__int64 a1, C_MinecraftUIRenderContext* renderCtx) {
 			vec2_t textPos = vec2_t(wid.x / 2.f - titleWidth / 2.f, wid.y / 9.f);
 			vec2_t msgPos = vec2_t(wid.x / 2.f - msgWidth / 2.f, textPos.y + titleTextHeight + paddingVert);
 			vec4_t rectPos = vec4_t(
-				centerPos.x - paddingHoriz - max(titleWidth, msgWidth) / 2,
+				centerPos.x - paddingHoriz - std::max(titleWidth, msgWidth) / 2,
 				centerPos.y - paddingVert,
-				centerPos.x + paddingHoriz + max(titleWidth, msgWidth) / 2,
+				centerPos.x + paddingHoriz + std::max(titleWidth, msgWidth) / 2,
 				centerPos.y + paddingVert * 2 + titleTextHeight + messageHeight * lines);
 			DrawUtils::fillRectangle(rectPos, MC_Color(13, 29, 48), box->fadeVal);
 			DrawUtils::drawRectangle(rectPos, rcolors, box->fadeVal, 2.f);
@@ -895,9 +931,9 @@ float* Hooks::Dimension_getFogColor(__int64 _this, float* color, __int64 a3, flo
 float Hooks::Dimension_getTimeOfDay(__int64 _this, int a2, float a3) {
 	static auto oGetTimeOfDay = g_Hooks.Dimension_getTimeOfDayHook->GetFastcall<float, __int64, int, float>();
 
-	static auto nightMod = moduleMgr->getModule<NightMode>();
-	if (nightMod->isEnabled()) {
-		return nightMod->modifier;
+	static auto timeChange = moduleMgr->getModule<TimeChanger>();
+	if (timeChange->isEnabled()) {
+		return timeChange->modifier;
 	}
 
 	return oGetTimeOfDay(_this, a2, a3);
@@ -965,11 +1001,10 @@ void Hooks::PleaseAutoComplete(__int64 a1, __int64 a2, TextHolder* text, int a4)
 	static syncShit_t syncShit = nullptr;
 	if (syncShit == nullptr) {
 		uintptr_t sigOffset = 0;
-
-		if (g_Data.getVersion() == GAMEVERSION::g_1_16_0)
-			sigOffset = FindSignature("40 53 48 83 EC ?? 48 C7 44 24 20 FE FF FF FF 48 8B DA 48 8D 4C 24 ?? E8 ?? ?? ?? ?? 90 48 8B C8 E8 ?? ?? ?? ?? 48 8B 08 4C 8B 81 ?? 04");
-		else
-			sigOffset = FindSignature("40 57 48 83 EC 40 48 C7 44 24 ? ? ? ? ? 48 89 5C 24 ? 48 89 74 24 ? 48 8B F2 48 8D 3D ? ? ? ? 48 8B CF");
+		// sig of function: (present 3 times in the exe)
+		sigOffset = FindSignature("48 8B D7 48 8B 8B ?? ?? ?? ?? E8 ?? ?? ?? ?? 48 8B 9C") + 11;
+		auto funcOffset = *reinterpret_cast<int*>(sigOffset);
+		sigOffset += 4 + funcOffset;
 
 		syncShit = reinterpret_cast<syncShit_t>(sigOffset);
 	}
@@ -1030,7 +1065,7 @@ void Hooks::PleaseAutoComplete(__int64 a1, __int64 a2, TextHolder* text, int a4)
 			if (searchResults.size() > 1) {
 				for (auto it = searchResults.begin()++; it != searchResults.end(); it++) {
 					auto alias = it->cmdAlias;
-					maxReplaceLength = min(maxReplaceLength, alias.size());
+					maxReplaceLength = std::min(maxReplaceLength, alias.size());
 
 					for (int i = 0; i < maxReplaceLength; i++) {
 						if (alias[i] != firstResult.cmdAlias[i]) {
@@ -1074,6 +1109,7 @@ void Hooks::PleaseAutoComplete(__int64 a1, __int64 a2, TextHolder* text, int a4)
 void Hooks::LoopbackPacketSender_sendToServer(C_LoopbackPacketSender* a, C_Packet* packet) {
 	static auto oFunc = g_Hooks.LoopbackPacketSender_sendToServerHook->GetFastcall<void, C_LoopbackPacketSender*, C_Packet*>();
 
+	static auto autoSneakMod = moduleMgr->getModule<AutoSneak>();
 	static auto freecamMod = moduleMgr->getModule<Freecam>();
 	static auto blinkMod = moduleMgr->getModule<Blink>();
 	static auto noPacketMod = moduleMgr->getModule<NoPacket>();
@@ -1114,6 +1150,14 @@ void Hooks::LoopbackPacketSender_sendToServer(C_LoopbackPacketSender* a, C_Packe
 			return;
 		}
 	}
+
+	if (autoSneakMod->isEnabled() && g_Data.getLocalPlayer() != nullptr && autoSneakMod->doSilent && packet->isInstanceOf<C_PlayerActionPacket>()) {
+		auto* pp = reinterpret_cast<C_PlayerActionPacket*>(packet);
+		
+		if (pp->action == 12 && pp->entityRuntimeId == g_Data.getLocalPlayer()->entityRuntimeId) 
+			return; //dont send uncrouch
+	}
+	
 	moduleMgr->onSendPacket(packet);
 
 	if (strcmp(packet->getName()->getText(), "EmotePacket") == 0) {
@@ -1128,17 +1172,9 @@ void Hooks::LoopbackPacketSender_sendToServer(C_LoopbackPacketSender* a, C_Packe
 
 float Hooks::LevelRendererPlayer_getFov(__int64 _this, float a2, bool a3) {
 	static auto oGetFov = g_Hooks.LevelRendererPlayer_getFovHook->GetFastcall<float, __int64, float, bool>();
-	static void* renderItemInHand = reinterpret_cast<void*>(FindSignature("0F 28 F0 F3 44 0F 10 3D ?? ?? ?? ?? F3 41 0F 59 F7"));
+	static void* renderItemInHand = reinterpret_cast<void*>(FindSignature("0F 28 C8 F3 0F 59 0D ?? ?? ?? ?? 41 0F 28 F9"));
 
-	static void* setupCamera = nullptr;
-
-	if (!setupCamera) {
-		if (g_Data.getVersion() == GAMEVERSION::g_1_16_0)
-			setupCamera = reinterpret_cast<void*>(FindSignature("0F 28 F8 F3 0F 59 3D ? ? ? ? 41 0F B6 4E ? 88 4C 24 ?? 44 0F B6 E1"));
-		else
-			setupCamera = reinterpret_cast<void*>(FindSignature("44 0F 28 D8 F3 44 0F 59 1D ? ? ? ? 41 0F B6 4E ? 88 4C 24"));
-	}
-	
+	static void* setupCamera = reinterpret_cast<void*>(FindSignature("44 0F 28 D8 F3 44 0F 59 1D ?? ?? ?? ?? 0F"));
 
 	static auto zoomModule = moduleMgr->getModule<Zoom>();
 
@@ -1175,12 +1211,12 @@ void Hooks::GameMode_startDestroyBlock(C_GameMode* _this, vec3_ti* a2, uint8_t f
 	if (nukerModule->isEnabled()) {
 		vec3_ti tempPos;
 
-		const int range = nukerModule->getNukerRadius();
+		int range = nukerModule->getNukerRadius();
 		const bool isVeinMiner = nukerModule->isVeinMiner();
 		const bool isAutoMode = nukerModule->isAutoMode();
 
 		C_BlockSource* region = g_Data.getLocalPlayer()->region;
-		int selectedBlockId = (*(region->getBlock(*a2)->blockLegacy))->blockId;
+		auto selectedBlockId = ((region->getBlock(*a2)->blockLegacy))->blockId;
 		uint8_t selectedBlockData = region->getBlock(*a2)->data;
 
 		if (!isAutoMode) {
@@ -1193,8 +1229,8 @@ void Hooks::GameMode_startDestroyBlock(C_GameMode* _this, vec3_ti* a2, uint8_t f
 						if (tempPos.y > 0) {
 							C_Block* blok = region->getBlock(tempPos);
 							uint8_t data = blok->data;
-							int id = (*(blok->blockLegacy))->blockId;
-							if (id != 0 && (!isVeinMiner || (id == selectedBlockId && data == selectedBlockData)))
+							auto id = blok->blockLegacy->blockId;
+							if (blok->blockLegacy->material->isSolid == true && (!isVeinMiner || (id == selectedBlockId && data == selectedBlockData)))
 								_this->destroyBlock(&tempPos, face);
 						}
 					}
@@ -1254,16 +1290,15 @@ __int64 Hooks::LevelRenderer_renderLevel(__int64 _this, __int64 a2, __int64 a3) 
 	static reloadShit_t reloadChunk = nullptr;
 
 	if (!reloadChunk) {
-		if (g_Data.getVersion() == GAMEVERSION::g_1_16_0)
-			reloadChunk = reinterpret_cast<reloadShit_t>(FindSignature("48 8B C4 56 57 41 54 41 56 41 57 48 ?? EC ? ? ? ? 48 C7 40 ? ? ? ? ? 48 89 58 ?? 48 89 68 ?? 48 8B 05 ? ? ? ? 48 33 C4 48 89 44 24 ? 48 8B F9"));
-		else
-			reloadChunk = reinterpret_cast<reloadShit_t>(FindSignature("48 8B C4 56 57 41 54 41 56 41 57 48 83 EC ? 48 C7 40 ? ? ? ? ? 48 89 58 ? 48 89 68 ? 48 8B 05 ? ? ? ? 48 33 C4 48 89 44 24 ? 48 8B F9 4C 8D B9 ? ? ? ? 49 8B CF"));
+		// RenderChunkCoordinator::rebuildAllRenderChunkGeometry
+		reloadChunk = reinterpret_cast<reloadShit_t>(FindSignature("48 89 5C 24 10 48 89 6C 24 18 48 89 74 24 20 57 48 83 EC ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 44 24 ?? 48 8B F9 48 8D A9"));
 	}
 
 	static auto xrayMod = moduleMgr->getModule<Xray>();
 
 	static bool lastState = false;
 	if (lastState != xrayMod->isEnabled()) {
+		// LevelRenderer::rebuildAllRenderChunkGeometry
 		lastState = xrayMod->isEnabled();
 		unsigned long long* v5;  // rdi
 		unsigned long long* i;   // rbx
@@ -1282,15 +1317,34 @@ __int64 Hooks::LevelRenderer_renderLevel(__int64 _this, __int64 a2, __int64 a3) 
 	return ret;
 }
 
-void Hooks::ClickFunc(__int64 a1, char mouseButton, char isDown, __int16 mouseX, __int16 mouseY, __int16 a6, __int16 a7, char a8) {
+void Hooks::ClickFunc(__int64 a1, char mouseButton, char isDown, __int16 mouseX, __int16 mouseY, __int16 relativeMovementX, __int16 relativeMovementY, char a8) {
 	static auto oFunc = g_Hooks.ClickFuncHook->GetFastcall<void, __int64, char, char, __int16, __int16, __int16, __int16, char>();
 	static auto clickGuiModule = moduleMgr->getModule<ClickGuiMod>();
 
+	//MouseButtons
+	//0 = mouse move
+	//1 = left click
+	//2 = right click
+	//3 = middle click
+	//4 = scroll   (isDown: 120 (SCROLL UP) and -120 (SCROLL DOWN))
+
+	ClickGui::onMouseClickUpdate((int)mouseButton, isDown);
+	HImGui.onMouseClickUpdate((int)mouseButton, isDown);
+
+	if (isDown)
+		if (mouseButton == 1)
+			g_Data.leftclickCount++;
+		else if (mouseButton == 2)
+			g_Data.rightclickCount++;
+
 	if (clickGuiModule->isEnabled()) {
+		if (mouseButton == 4) {
+			ClickGui::onWheelScroll(isDown > 0);
+		}
 		if (mouseButton != 0)  // Mouse click event
 			return;
 	}
-	return oFunc(a1, mouseButton, isDown, mouseX, mouseY, a6, a7, a8);
+	return oFunc(a1, mouseButton, isDown, mouseX, mouseY, relativeMovementX, relativeMovementY, a8);
 }
 
 __int64 Hooks::MoveInputHandler_tick(C_MoveInputHandler* a1, C_Entity* a2) {
@@ -1311,54 +1365,14 @@ __int64 Hooks::ChestScreenController_tick(C_ChestScreenController* a1) {
 	return oFunc(a1);
 }
 
-__int64 Hooks::GetGamma(__int64 a1) {
-	static auto oFunc = g_Hooks.GetGammaHook->GetFastcall<__int64, __int64>();
-
+float Hooks::GetGamma(uintptr_t* a1) {
 	static auto fullBrightModule = moduleMgr->getModule<FullBright>();
+	if (fullBrightModule->isEnabled())
+		return 25.f;
 
-	struct Option {
-		void* vtable;
-		char filler[0x20];        // 0x008
-		TextHolder internalName;  // 0x0028
-		TextHolder friendlyName;  // 0x0048 // only exists when the value is present in the options
-		int optionId; // 0x68
-		char filler2[0xC]; // 0x6C
-		TextHolder nameInConfigFile; // 0x78
-		char filler3[0x50];  // 0x098
-		union {
-			struct {
-				float min;
-				float max;
-				float value;
-				float defaultValue;
-			} _float;
-			bool _bool;
-		} value;
-	};
-
-	static Option* gfx_gamma = 0;
-	if (gfx_gamma == 0) {
-		__int64 v6 = oFunc(a1);  // Calls to ClientInstance, returns options ptr
-
-		static int numOptions = (*reinterpret_cast<int*>(FindSignature("49 8D B6 ?? ?? ?? ?? 48 3B FE") + 3) - 16) / 8;
-
-		//logF("%llX", v6);
-		//logF("Num Options: %i", numOptions);
-
-		for (int i = 0; i < numOptions; i++) {
-			Option* ptr = *reinterpret_cast<Option**>(v6 + 0x10 + i * 8);
-			//if (ptr)
-			//	logF("%llX %s %s", v6 + 0x10 + i * 8, ptr->internalName.getText(), ptr->friendlyName.getText());
-			if (ptr && strcmp(ptr->internalName.getText(), "gfx_gamma") == 0) {
-				gfx_gamma = ptr;
-				//logF("%llX %s %s %llX", v6 + 0x10 + i * 8, ptr->internalName.getText(), ptr->friendlyName.getText(), &ptr->value);
-			}
-		}
-	}
-	if (gfx_gamma)
-		fullBrightModule->gammaPtr = &gfx_gamma->value._float.value;
-
-	return oFunc(a1);
+	//Get the normal gamma value
+	float* gamer = (float*)*(a1 + 0x27);
+	return *(gamer + 0x7A);
 }
 
 bool Hooks::Actor_isInWater(C_Entity* _this) {
@@ -1404,8 +1418,8 @@ void Hooks::Actor_ascendLadder(C_Entity* _this) {
 void Hooks::Actor_startSwimming(C_Entity* _this) {
 	static auto oFunc = g_Hooks.Actor_startSwimmingHook->GetFastcall<void, C_Entity*>();
 
-	static auto JesusModule = moduleMgr->getModule<Jesus>();
-	if (JesusModule->isEnabled() && g_Data.getLocalPlayer() == _this)
+	static auto jesusModule = moduleMgr->getModule<Jesus>();
+	if (jesusModule->isEnabled() && g_Data.getLocalPlayer() == _this)
 		return;
 
 	oFunc(_this);
@@ -1421,9 +1435,9 @@ float Hooks::GameMode_getPickRange(C_GameMode* _this, __int64 a2, char a3) {
 	static auto oFunc = g_Hooks.GameMode_getPickRangeHook->GetFastcall<float, C_GameMode*, __int64, char>();
 
 	if (g_Data.getLocalPlayer() != nullptr) {
-		static auto infiniteBlockReachModule = moduleMgr->getModule<InfiniteBlockReach>();
-		if (infiniteBlockReachModule->isEnabled())
-			return infiniteBlockReachModule->getBlockReach();
+		static auto extendedBlockReachModule = moduleMgr->getModule<ExtendedBlockReach>();
+		if (extendedBlockReachModule->isEnabled())
+			return extendedBlockReachModule->getBlockReach();
 
 		static auto teleportModule = moduleMgr->getModule<Teleport>();
 		if (teleportModule->isEnabled())
@@ -1549,7 +1563,15 @@ __int64 Hooks::PaintingRenderer__render(__int64 _this, __int64 a2, __int64 a3) {
 bool Hooks::DirectoryPackAccessStrategy__isTrusted(__int64 _this) {
 	static auto func = g_Hooks.DirectoryPackAccessStrategy__isTrustedHook->GetFastcall<bool, __int64>();
 
-	if (Utils::getRttiBaseClassName(reinterpret_cast<void*>(_this)) == "DirectoryPackAccessStrategy")
+	static uintptr_t** directoryPackAccessStrategyVtable = 0;
+
+	if (!directoryPackAccessStrategyVtable) {
+		uintptr_t sigOffset = FindSignature("48 8D 05 ?? ?? ?? ?? 49 89 06 49 8D 76 50");
+		int offset = *reinterpret_cast<int*>(sigOffset + 3);
+		directoryPackAccessStrategyVtable = reinterpret_cast<uintptr_t**>(sigOffset + offset + 7);
+	}
+	
+	if (*reinterpret_cast<uintptr_t*>(_this) == (uintptr_t)directoryPackAccessStrategyVtable)
 		return true;
 
 	return func(_this);

@@ -10,15 +10,15 @@ void GameData::retrieveClientInstance() {
 	static uintptr_t clientInstanceOffset = 0x0;
 	uintptr_t sigOffset = 0x0;
 	if (clientInstanceOffset == 0x0) {
-		sigOffset = FindSignature("48 8B 1D ?? ?? ?? ?? 48 8B 3D ?? ?? ?? ?? 48 3B DF 74 23 66 90");
+		sigOffset = FindSignature("48 8B 15 ? ? ? ? 4C 8B 02 4C 89 06 40 84 FF 74 ? 48 8B CD E8 ? ? ? ? 48 8B C6 48 8B 4C 24 ? 48 33 CC E8 ? ? ? ? 48 8B 5C 24 ? 48 8B 6C 24 ? 48 8B 74 24 ? 48 83 C4 ? 5F C3 B9 ? ? ? ? E8 ? ? ? ? CC E8 ? ? ? ? CC CC CC CC CC CC CC CC CC CC CC 48 89 5C 24 ? 48 89 6C 24 ? 56");
 		if (sigOffset != 0x0) {
 			int offset = *reinterpret_cast<int*>((sigOffset + 3));                                                 // Get Offset from code
 			clientInstanceOffset = sigOffset - g_Data.gameModule->ptrBase + offset + /*length of instruction*/ 7;  // Offset is relative
 			logF("clinet: %llX", clientInstanceOffset);
 		}
 	}
-	g_Data.clientInstance = reinterpret_cast<C_ClientInstance*>(g_Data.slimMem->ReadPtr<uintptr_t*>(g_Data.gameModule->ptrBase + clientInstanceOffset, {0x0, 0x0, 0x380, 0x10}));
-
+	// clientInstanceOffset = 0x03CD5058;  // pointer scanned, can't find good signatures so it'll stay
+	g_Data.clientInstance = reinterpret_cast<C_ClientInstance*>(g_Data.slimMem->ReadPtr<uintptr_t*>(g_Data.gameModule->ptrBase + clientInstanceOffset, {0x0, 0x0, 0x50}));
 #ifdef _DEBUG
 	if (g_Data.clientInstance == 0)
 		throw std::exception("Client Instance is 0");
@@ -27,8 +27,9 @@ void GameData::retrieveClientInstance() {
 
 void GameData::checkGameVersion() {
 	static uintptr_t sigOffset = 0;
+	// near string MinimumCompatibleClientVersion
 	if (sigOffset == 0)
-		sigOffset = FindSignature("48 8D 1D ?? ?? ?? ?? 8B 04 0A 39 05 ?? ?? ?? ?? 0F 8F ?? ?? ?? ?? 4C 8B CB 48 83 3D ?? ?? ?? ?? 10 4C 0F 43 0D ?? ?? ?? ??");
+		sigOffset = FindSignature("48 8D 15 ?? ?? ?? ?? 48 3B CA 74 ?? 48 83 3D ?? ?? ?? ?? 10 48 0F 43 15 ?? ?? ?? ?? 4C 8B 05 ?? ?? ?? ?? E8 ?? ?? ?? ?? 49 8B C7");
 	int offset = *reinterpret_cast<int*>((sigOffset + 3));
 	std::string ver = reinterpret_cast<TextHolder*>(sigOffset + offset + 7)->getText();
 	auto lastDot = ver.find_last_of(".");
@@ -53,7 +54,7 @@ bool GameData::canUseMoveKeys() {
 bool GameData::isKeyDown(int key) {
 	static uintptr_t keyMapOffset = 0x0;
 	if (keyMapOffset == 0x0) {
-		uintptr_t sigOffset = FindSignature("48 8D 0D ?? ?? ?? ?? 89 1C 81 48");
+		uintptr_t sigOffset = FindSignature("48 8D 0D ?? ?? ?? ?? 89 1C B9");
 		if (sigOffset != 0x0) {
 			int offset = *reinterpret_cast<int*>((sigOffset + 3));                                         // Get Offset from code
 			keyMapOffset = sigOffset - g_Data.gameModule->ptrBase + offset + /*length of instruction*/ 7;  // Offset is relative
@@ -178,11 +179,11 @@ void GameData::forEachEntity(std::function<void(C_Entity*, bool)> callback) {
 	{
 		// MultiplayerLevel::directTickEntities
 		__int64 region = reinterpret_cast<__int64>(g_Data.getLocalPlayer()->region);
-		__int64* entityIdMap = *(__int64**)(*(__int64*)(region + 0x20) + 0x120i64);
+		__int64* entityIdMap = *(__int64**)(*(__int64*)(region + 0x20) + 0x130i64);
 		for (__int64* i = (__int64*)*entityIdMap; i != entityIdMap; i = (__int64*)*i) {
 			__int64 actor = i[3];
 			// !isRemoved() && !isGlobal()
-			if (actor && !*(char*)(actor + 0x389) && !*(char*)(actor + 0x38A)) {
+			if (actor && !*(char*)(actor + 0x3C1) && !*(char*)(actor + 0x3C2)) {
 				C_Entity* ent = reinterpret_cast<C_Entity*>(actor);
 				if (std::find(tickedEntities.begin(), tickedEntities.end(), ent) == tickedEntities.end()) {
 					callback(ent, false);
@@ -197,7 +198,7 @@ void GameData::forEachEntity(std::function<void(C_Entity*, bool)> callback) {
 		C_EntityList* entList = g_Data.getEntityList();
 		if (entList == 0) {
 #ifdef _DEBUG
-			logF("EntityList broken btw");
+			logF("EntityList broken btw yeeeeeeyt");
 #endif
 		} else {
 			size_t listSize = entList->getListSize();

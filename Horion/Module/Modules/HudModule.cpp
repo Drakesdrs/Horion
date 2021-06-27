@@ -2,7 +2,7 @@
 #include "../../DrawUtils.h"
 #include "../../Scripting/ScriptManager.h"
 
-HudModule::HudModule() : IModule(0x0, Category::VISUAL, "Displays ArrayList/TabGUI") {
+HudModule::HudModule() : IModule(0, Category::VISUAL, "Displays ArrayList/TabGUI") {
 	registerBoolSetting("TabGui", &this->tabgui, this->tabgui);
 	registerBoolSetting("ArrayList", &this->arraylist, this->arraylist);
 	registerBoolSetting("ClickToggle", &this->clickToggle, this->clickToggle);
@@ -82,7 +82,7 @@ void HudModule::onPostRender(C_MinecraftUIRenderContext* renderCtx) {
 			float y = windowSize.y - 57.5f;
 			for (int i = 0; i < 4; i++) {
 				C_ItemStack* stack = player->getArmor(i);
-				if (stack->item != nullptr) {
+				if (stack->isValid()) {
 					DrawUtils::drawItem(stack, vec2_t(x, y), opacity, scale, stack->isEnchanted());
 					x += scale * spacing;
 				}
@@ -90,18 +90,18 @@ void HudModule::onPostRender(C_MinecraftUIRenderContext* renderCtx) {
 			C_PlayerInventoryProxy* supplies = g_Data.getLocalPlayer()->getSupplies();
 			C_ItemStack* item = supplies->inventory->getItemStack(supplies->selectedHotbarSlot);
 			//x += scale * spacing;
-			if (item->item != nullptr)
+			if (item->isValid())
 				DrawUtils::drawItem(item, vec2_t(x, y), opacity, scale, item->isEnchanted());
 		}
 	}
 	{  // Keystrokes
 		if (!(g_Data.getLocalPlayer() == nullptr || !this->keystrokes || !GameData::canUseMoveKeys())) {
 			C_GameSettingsInput* input = g_Data.getClientInstance()->getGameSettingsInput();
-			DrawUtils::drawKeystroke(*input->forwardKey, vec2_t(32, windowSize.y - 74));
-			DrawUtils::drawKeystroke(*input->leftKey, vec2_t(10, windowSize.y - 52));
-			DrawUtils::drawKeystroke(*input->backKey, vec2_t(32, windowSize.y - 52));
-			DrawUtils::drawKeystroke(*input->rightKey, vec2_t(54, windowSize.y - 52));
-			DrawUtils::drawKeystroke(*input->spaceBarKey, vec2_t(10, windowSize.y - 30));
+			DrawUtils::drawKeystroke(*input->forwardKey, vec2_t(32.f, windowSize.y - 74));
+			DrawUtils::drawKeystroke(*input->leftKey, vec2_t(10.f, windowSize.y - 52));
+			DrawUtils::drawKeystroke(*input->backKey, vec2_t(32.f, windowSize.y - 52));
+			DrawUtils::drawKeystroke(*input->rightKey, vec2_t(54.f, windowSize.y - 52));
+			DrawUtils::drawKeystroke(*input->spaceBarKey, vec2_t(10.f, windowSize.y - 30));
 		}
 	}
 }

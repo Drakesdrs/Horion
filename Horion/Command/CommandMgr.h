@@ -23,6 +23,7 @@
 #include "Commands/SpammerCommand.h"
 #include "Commands/TeleportCommand.h"
 #include "Commands/ToggleCommand.h"
+#include "Commands/TopCommand.h"
 #include "Commands/UnbindCommand.h"
 #include "Commands/setoffhandCommand.h"
 #include "Commands/CommandBlockExploitCommand.h"
@@ -31,6 +32,7 @@
 #include "Commands/SetprefixCommand.h"
 #include "Commands/NbtCommand.h"
 #include "Commands/ExecuteCommand.h"
+#include "Commands/WaypointCommand.h"
 
 #include "Commands/ScriptCommand.h"
 #include "Commands/PathCommand.h"
